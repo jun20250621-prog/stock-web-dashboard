@@ -19,7 +19,11 @@ def load_config():
     config_path = os.path.join(os.path.dirname(__file__), 'stock_cli', 'config.json')
     if os.path.exists(config_path):
         with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            config = json.load(f)
+            # 修正資料庫路徑
+            if 'database' in config and 'path' in config['database']:
+                config['database']['path'] = os.path.join(os.path.dirname(__file__), config['database']['path'])
+            return config
     return {}
 
 config = load_config()
@@ -210,6 +214,12 @@ def api_watchlist_add():
 @app.route('/api/watchlist/delete/<code>', methods=['POST'])
 def api_watchlist_delete(code):
     wm.remove(code)
+    return jsonify({'success': True})
+
+@app.route('/api/watchlist/update/<code>', methods=['POST'])
+def api_watchlist_update(code):
+    data = request.json
+    wm.update(code, data)
     return jsonify({'success': True})
 
 @app.route('/api/trade/add', methods=['POST'])

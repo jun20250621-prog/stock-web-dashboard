@@ -88,10 +88,10 @@
             </div>
             <div class="tab-pane fade" id="analysis">
                 <div class="row">
-                    <div class="col-md-6"><div class="card"><div class="card-header"><i class="fas fa-chart-pie me-2"></i>紀律分析</div><div class="card-body"><canvas id="disciplineChart"></canvas><div id="disciplineStats"></div></div></div></div>
-                    <div class="col-md-6"><div class="card"><div class="card-header"><i class="fas fa-chart-bar me-2"></i>策略表現</div><div class="card-body"><canvas id="strategyChart"></canvas></div></div></div>
+                    <div class="col-md-6"><div class="card"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="fas fa-chart-pie me-2"></i>紀律分析</span><button class="btn btn-sm btn-outline-primary" onclick="reAnalyze()"><i class="fas fa-redo me-1"></i>重新分析</button></div><div class="card-body"><canvas id="disciplineChart"></canvas><div id="disciplineStats"></div></div></div></div>
+                    <div class="col-md-6"><div class="card"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="fas fa-chart-bar me-2"></i>策略表現</span><button class="btn btn-sm btn-outline-primary" onclick="reAnalyze()"><i class="fas fa-redo me-1"></i>重新分析</button></div><div class="card-body"><canvas id="strategyChart"></canvas></div></div></div>
                 </div>
-                <div class="card mt-3"><div class="card-header"><i class="fas fa-chart-line me-2"></i>每月績效趨勢</div><div class="card-body"><canvas id="monthlyChart"></canvas></div></div>
+                <div class="card mt-3"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="fas fa-chart-line me-2"></i>每月績效趨勢</span><button class="btn btn-sm btn-outline-primary" onclick="reAnalyze()"><i class="fas fa-redo me-1"></i>重新分析</button></div><div class="card-body"><canvas id="monthlyChart"></canvas></div></div>
             </div>
             <div class="tab-pane fade" id="strong">
                 <div class="card">
@@ -236,7 +236,7 @@
             watchlistData = await resp.json();
             let html = ''; watchlistData.forEach(s => {
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
-                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.current_price||'-'}</td><td>${s.target_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td>${s.reason||''}</td><td><button class="btn btn-sm btn-outline-danger" onclick="deleteWatchlist('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.current_price||'-'}</td><td>${s.target_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td>${s.reason||''}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editWatchlist('${s.code}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteWatchlist('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
             document.querySelector('#watchlistTable tbody').innerHTML = html || '<tr><td colspan="6" class="text-center">無觀察名單</td></tr>';
         }catch(e){ console.error(e); }
@@ -248,7 +248,7 @@
             tradesData = await resp.json();
             let html = ''; tradesData.forEach(t => {
                 const pc = (t.profit_loss||0)>=0?'profit-positive':'profit-negative';
-                html += `<tr><td><b>${t.code}</b> ${t.name||''}</td><td>${t.buy_date||'-'}</td><td>${t.buy_price||'-'}</td><td>${t.sell_date||'-'}</td><td>${t.sell_price||'-'}</td><td class="${pc}">${(t.profit_loss||0)>=0?'+':''}${(t.profit_loss||0).toFixed(2)}</td><td>${t.discipline||'-'}</td><td><button class="btn btn-sm btn-outline-danger" onclick="deleteTrade('${t.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                html += `<tr><td><b>${t.code}</b> ${t.name||''}</td><td>${t.buy_date||'-'}</td><td>${t.buy_price||'-'}</td><td>${t.sell_date||'-'}</td><td>${t.sell_price||'-'}</td><td class="${pc}">${(t.profit_loss||0)>=0?'+':''}${(t.profit_loss||0).toFixed(2)}</td><td>${t.discipline||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editTrade('${t.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteTrade('${t.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
             document.querySelector('#tradesTable tbody').innerHTML = html || '<tr><td colspan="8" class="text-center">無交易紀錄</td></tr>';
         }catch(e){ console.error(e); }
@@ -273,6 +273,11 @@
                 strategyChart = new Chart(ctx, {type:'bar', data:{labels:Object.keys(strat), datasets:[{label:'平均報酬%', data:Object.values(strat).map(d=>d.avg_profit_loss_pct||0), backgroundColor:Object.values(strat).map(d=>(d.avg_profit_loss_pct||0)>=0?'#4CAF50':'#F44336')}]}, options:{responsive:true}});
             }
         }catch(e){ console.error(e); }
+    }
+
+    async function reAnalyze(){
+        disciplineChart = null; strategyChart = null; monthlyChart = null;
+        await loadAnalysis();
     }
 
     async function loadStrongStocks(){
@@ -358,6 +363,23 @@
         modal.show();
     }
 
+    function editWatchlist(code){
+        const s = watchlistData.find(x => x.code === code); if(!s) return;
+        document.getElementById('modalTitle').textContent = '編輯觀察名單 - '+code;
+        document.getElementById('modalBody').innerHTML = `
+            <div class="mb-2"><label>股票代碼</label><input class="form-control" value="${s.code}" disabled></div>
+            <div class="mb-2"><label>股票名稱</label><input class="form-control" id="wName" value="${s.name||''}"></div>
+            <div class="mb-2"><label>目標價</label><input class="form-control" id="wTarget" type="number" value="${s.target_price||''}"></div>
+            <div class="mb-2"><label>追蹤原因</label><textarea class="form-control" id="wReason">${s.reason||''}</textarea></div>
+        `;
+        document.getElementById('modalSave').onclick = async () => {
+            const data = {code: code, name: document.getElementById('wName').value, target_price: parseFloat(document.getElementById('wTarget').value), reason: document.getElementById('wReason').value};
+            await fetch('/api/watchlist/update/'+code, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            modal.hide(); loadWatchlist();
+        };
+        modal.show();
+    }
+
     function showAddTrade(){
         document.getElementById('modalTitle').textContent = '新增交易紀錄';
         document.getElementById('modalBody').innerHTML = `
@@ -370,6 +392,24 @@
         document.getElementById('modalSave').onclick = async () => {
             const data = {code:document.getElementById('tCode').value, name:document.getElementById('tName').value, type:'買入', buy_date:document.getElementById('tBuyDate').value, buy_price:parseFloat(document.getElementById('tBuyPrice').value), sell_date:document.getElementById('tSellDate').value, sell_price:parseFloat(document.getElementById('tSellPrice').value), shares:parseInt(document.getElementById('tShares').value), discipline:document.getElementById('tDiscipline').value, result:document.getElementById('tResult').value};
             await fetch('/api/trade/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            modal.hide(); loadTrades(); loadAnalysis();
+        };
+        modal.show();
+    }
+
+    function editTrade(id){
+        const t = tradesData.find(x => x.id == id); if(!t) return;
+        document.getElementById('modalTitle').textContent = '編輯交易紀錄 - '+t.code;
+        document.getElementById('modalBody').innerHTML = `
+            <div class="row"><div class="col mb-2"><label>股票代碼</label><input class="form-control" id="tCode" value="${t.code}"></div><div class="col mb-2"><label>股票名稱</label><input class="form-control" id="tName" value="${t.name||''}"></div></div>
+            <div class="row"><div class="col mb-2"><label>買入日期</label><input class="form-control" id="tBuyDate" type="date" value="${t.buy_date||''}"></div><div class="col mb-2"><label>買入價格</label><input class="form-control" id="tBuyPrice" type="number" value="${t.buy_price||''}"></div></div>
+            <div class="row"><div class="col mb-2"><label>賣出日期</label><input class="form-control" id="tSellDate" type="date" value="${t.sell_date||''}"></div><div class="col mb-2"><label>賣出價格</label><input class="form-control" id="tSellPrice" type="number" value="${t.sell_price||''}"></div></div>
+            <div class="row"><div class="col mb-2"><label>股數</label><input class="form-control" id="tShares" type="number" value="${t.shares||1000}"></div><div class="col mb-2"><label>紀律</label><select class="form-control" id="tDiscipline"><option ${t.discipline=='完全遵守'?'selected':''}>完全遵守</option><option ${t.discipline=='部分遵守'?'selected':''}>部分遵守</option><option ${t.discipline=='未遵守'?'selected':''}>未遵守</option></select></div></div>
+            <div class="mb-2"><label>結果</label><select class="form-control" id="tResult"><option ${t.result=='成功'?'selected':''}>成功</option><option ${t.result=='失敗'?'selected':''}>失敗</option><option ${t.result=='持平'?'selected':''}>持平</option></select></div>
+        `;
+        document.getElementById('modalSave').onclick = async () => {
+            const data = {code:document.getElementById('tCode').value, name:document.getElementById('tName').value, buy_date:document.getElementById('tBuyDate').value, buy_price:parseFloat(document.getElementById('tBuyPrice').value), sell_date:document.getElementById('tSellDate').value, sell_price:parseFloat(document.getElementById('tSellPrice').value), shares:parseInt(document.getElementById('tShares').value), discipline:document.getElementById('tDiscipline').value, result:document.getElementById('tResult').value};
+            await fetch('/api/trade/update/'+id, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             modal.hide(); loadTrades(); loadAnalysis();
         };
         modal.show();
