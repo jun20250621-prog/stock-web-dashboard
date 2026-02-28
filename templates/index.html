@@ -193,7 +193,7 @@
 
     async function loadPortfolio(){
         try{
-            const resp = await fetch('/api/portfolio');
+            const resp = await fetch('/api/portfolio?t=' + Date.now());
             portfolioData = await resp.json();
             let html = ''; let totalValue = 0, totalCost = 0;
             portfolioData.forEach(s => {
@@ -233,7 +233,7 @@
 
     async function loadWatchlist(){
         try{
-            const resp = await fetch('/api/watchlist');
+            const resp = await fetch('/api/watchlist?t=' + Date.now());
             watchlistData = await resp.json();
             let html = ''; watchlistData.forEach(s => {
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
@@ -250,7 +250,7 @@
 
     async function loadTrades(){
         try{
-            const resp = await fetch('/api/trades');
+            const resp = await fetch('/api/trades?t=' + Date.now());
             tradesData = await resp.json();
             let html = ''; tradesData.forEach(t => {
                 const pc = (t.profit_loss||0)>=0?'profit-positive':'profit-negative';
