@@ -377,9 +377,17 @@ def api_export_portfolio():
 @app.route('/api/export/trades')
 def api_export_trades():
     """匯出交易紀錄"""
+    # 策略代號對照表
+    strategy_names = {
+        'STG001': 'KD黃金交叉', 'STG002': 'KD死亡交叉', 'STG003': 'MA多頭排列',
+        'STG004': 'RSI超賣反彈', 'STG005': 'MACD黃金交叉', 'STG006': '價量齊揚',
+        'STG007': '突破整理平台', 'STG008': '殖利率策略', 'STG009': '營收成長'
+    }
     trades = tj.get_trades()
     data = []
     for t in trades:
+        strategy_id = t.get('entry_strategy_id', '')
+        strategy_name = strategy_names.get(strategy_id, strategy_id)
         data.append({
             '股票代碼': t.get('code', ''),
             '股票名稱': t.get('name', ''),
@@ -392,7 +400,7 @@ def api_export_trades():
             '損益率': t.get('profit_loss_pct', 0),
             '結果': t.get('result', ''),
             '紀律': t.get('discipline', ''),
-            '策略': t.get('entry_strategy_id', '')
+            '策略': strategy_name
         })
     return jsonify(create_excel(data, ['股票代碼', '股票名稱', '買入日期', '買入價格', '賣出日期', '賣出價格', '股數', '損益', '損益率', '結果', '紀律', '策略'], f'交易紀錄_{datetime.now().strftime("%Y%m%d")}.xlsx'))
 
