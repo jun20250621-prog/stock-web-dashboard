@@ -196,8 +196,63 @@ def api_stock(code):
 
 @app.route('/api/strong_stocks')
 def api_strong_stocks():
-    # 強勢股篩選功能 - 暫時停用
-    return jsonify([])
+    try:
+        # 熱門股票列表
+        popular_stocks = [
+            {'code': '2330', 'name': '台積電', 'industry': '半導體'},
+            {'code': '2454', 'name': '聯發科', 'industry': 'IC設計'},
+            {'code': '2317', 'name': '鴻海', 'industry': '電子'},
+            {'code': '2382', 'name': '廣達', 'industry': '電子'},
+            {'code': '3711', 'name': '日月光', 'industry': '半導體'},
+            {'code': '3034', 'name': '聯詠', 'industry': 'IC設計'},
+            {'code': '3017', 'name': '奇鋐', 'industry': '散熱'},
+            {'code': '3231', 'name': '緯創', 'industry': '電子'},
+            {'code': '2356', 'name': '英業達', 'industry': '電子'},
+            {'code': '2353', 'name': '宏碁', 'industry': '電子'},
+            {'code': '6282', 'name': '康舒', 'industry': '電源'},
+            {'code': '4909', 'name': '新復興', 'industry': '通訊'},
+            {'code': '4908', 'name': '前鼎', 'industry': '光電'},
+            {'code': '4977', 'name': '眾達-KY', 'industry': '光電'},
+            {'code': '1590', 'name': '亞德客-KY', 'industry': '氣動'},
+            {'code': '2630', 'name': '亞航', 'industry': '航太'},
+            {'code': '8112', 'name': '至上', 'industry': '半導體'},
+            {'code': '2374', 'name': '佳能', 'industry': '光電'}
+        ]
+        
+        results = []
+        for stock in popular_stocks:
+            try:
+                price_data = screener.get_daily_price(stock['code'], 5)
+                if price_data and len(price_data) >= 2:
+                    current = price_data[-1].get('close', 0)
+                    prev = price_data[-2].get('close', current)
+                    change_pct = ((current - prev) / prev * 100) if prev > 0 else 0
+                    
+                    # 計算5日動能
+                    returns = []
+                    for i in range(1, min(6, len(price_data))):
+                        p1 = price_data[i-1].get('close', 0)
+                        p2 = price_data[i].get('close', 0)
+                        if p1 > 0:
+                            returns.append((p2 - p1) / p1 * 100)
+                    momentum_5d = sum(returns) / len(returns) if returns else 0
+                    
+                    results.append({
+                        'code': stock['code'],
+                        'name': stock['name'],
+                        'industry': stock['industry'],
+                        'price': current,
+                        'change_pct': round(change_pct, 2),
+                        'momentum_5d': round(momentum_5d, 2)
+                    })
+            except Exception as e:
+                print(f"Error getting {stock['code']}: {e}")
+        
+        # 按動能排序
+        results.sort(key=lambda x: x.get('momentum_5d', 0), reverse=True)
+        return jsonify(results[:20])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ==================== 排程設定 API ====================
 
