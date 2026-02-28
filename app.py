@@ -25,11 +25,11 @@ def load_config():
 config = load_config()
 
 # 初始化模組
-from stock_cli.data.fetcher import StockDataFetcher, TaiwanStockScreener
-from stock_cli.data.portfolio import PortfolioManager
-from stock_cli.data.watchlist import WatchlistManager
-from stock_cli.data.trade_journal import TradeJournal
-from stock_cli.data.strategy_lib import StrategyLibrary
+from data.fetcher import StockDataFetcher, TaiwanStockScreener
+from data.portfolio import PortfolioManager
+from data.watchlist import WatchlistManager
+from data.trade_journal import TradeJournal
+from data.strategy_lib import StrategyLibrary
 
 fetcher = StockDataFetcher()
 screener = TaiwanStockScreener()

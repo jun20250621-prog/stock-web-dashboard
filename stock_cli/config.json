@@ -1,0 +1,237 @@
+{
+  "portfolio": {
+    "2630": {
+      "name": "亞航",
+      "cost": 55.0,
+      "shares": 1000,
+      "buy_date": "2025-01-15",
+      "stop_loss": 50,
+      "stop_profit": 70,
+      "industry": "航太",
+      "application": "飛機維修"
+    },
+    "8112": {
+      "name": "至上",
+      "cost": 73.9,
+      "shares": 1000,
+      "buy_date": "2025-01-20",
+      "stop_loss": 65,
+      "stop_profit": 90,
+      "industry": "半導體",
+      "application": "IC通路"
+    },
+    "2374": {
+      "name": "佳能",
+      "cost": 83.5,
+      "shares": 1000,
+      "buy_date": "2025-02-10",
+      "stop_loss": 75,
+      "stop_profit": 100,
+      "industry": "光電",
+      "application": "光學鏡頭"
+    },
+    "3017": {
+      "name": "奇鋐",
+      "cost": 1400.0,
+      "shares": 1000,
+      "buy_date": "2025-03-01",
+      "stop_loss": 1250,
+      "stop_profit": 1800,
+      "industry": "散熱",
+      "application": "AI伺服器/車用"
+    },
+    "2356": {
+      "name": "英業達",
+      "cost": 51.5,
+      "shares": 1000,
+      "buy_date": "2025-03-15",
+      "stop_loss": 45,
+      "stop_profit": 65,
+      "industry": "電子",
+      "application": "AI伺服器"
+    },
+    "2353": {
+      "name": "宏碁",
+      "cost": 37.0,
+      "shares": 1000,
+      "buy_date": "2025-03-20",
+      "stop_loss": 30,
+      "stop_profit": 50,
+      "industry": "電子",
+      "application": "PC/AI"
+    },
+    "3231": {
+      "name": "緯創",
+      "cost": 156.0,
+      "shares": 1000,
+      "buy_date": "2025-04-01",
+      "stop_loss": 140,
+      "stop_profit": 190,
+      "industry": "電子",
+      "application": "AI伺服器"
+    },
+    "6282": {
+      "name": "康舒",
+      "cost": 50.0,
+      "shares": 1000,
+      "buy_date": "2025-04-10",
+      "stop_loss": 45,
+      "stop_profit": 65,
+      "industry": "電源",
+      "application": "電源供應器"
+    },
+    "4909": {
+      "name": "新復興",
+      "cost": 61.0,
+      "shares": 1000,
+      "buy_date": "2025-04-15",
+      "stop_loss": 55,
+      "stop_profit": 75,
+      "industry": "通訊",
+      "application": "光纖/網通"
+    }
+  },
+  "watchlist": [
+    {
+      "code": "4908",
+      "name": "前鼎",
+      "reason": "光通訊成長趨勢",
+      "target_price": 80,
+      "industry": "光電",
+      "add_date": "2025-01-01"
+    },
+    {
+      "code": "4977",
+      "name": "眾達-KY",
+      "reason": "資料中心需求",
+      "target_price": 150,
+      "industry": "光電",
+      "add_date": "2025-01-01"
+    },
+    {
+      "code": "1590",
+      "name": "亞德客-KY",
+      "reason": "自動化設備需求",
+      "target_price": 1100,
+      "industry": "氣動",
+      "add_date": "2025-01-01"
+    }
+  ],
+  "market_leaders": [
+    {"code": "2330", "name": "台積電", "industry": "半導體", "application": "AI/高效能運算"},
+    {"code": "2454", "name": "聯發科", "industry": "IC設計", "application": "AI/手機晶片"},
+    {"code": "2317", "name": "鴻海", "industry": "電子", "application": "AI伺服器/蘋果供應鏈"},
+    {"code": "2382", "name": "廣達", "industry": "電子", "application": "AI伺服器"},
+    {"code": "3711", "name": "日月光", "industry": "半導體", "application": "AI先進封裝"},
+    {"code": "3034", "name": "聯詠", "industry": "IC設計", "application": "AI/顯示驅動"},
+    {"code": "4952", "name": "凌通", "industry": "IC設計", "application": "AI/周邊晶片"}
+  ],
+  "strategies": {
+    "STG001": {
+      "name": "KD黃金交叉",
+      "type": "technical",
+      "entry_condition": "K值>20 且 K>D 值黃金交叉",
+      "exit_condition": "K>80超買 或 觸及停利",
+      "stop_loss": 7,
+      "stop_profit": 20,
+      "risk_level": "中",
+      "keywords": ["K>D", "KD金叉", "KD黃金交叉", "K值向上突破D值", "低檔黃金交叉"]
+    },
+    "STG002": {
+      "name": "KD死亡交叉",
+      "type": "technical",
+      "entry_condition": "K值<80 且 K<D 值死亡交叉",
+      "exit_condition": "K<20超賣 或 觸及停損",
+      "stop_loss": 7,
+      "stop_profit": 15,
+      "risk_level": "中",
+      "keywords": ["K<D", "KD死叉", "KD死亡交叉", "K值向下跌破D值", "高檔死亡交叉"]
+    },
+    "STG003": {
+      "name": "MA多頭排列",
+      "type": "technical",
+      "entry_condition": "MA5>MA20>MA60 且股價站上MA5",
+      "exit_condition": "跌破MA20 或 MA5<MA20",
+      "stop_loss": 8,
+      "stop_profit": 25,
+      "risk_level": "中",
+      "keywords": ["MA5>MA20", "均線多頭", "多頭排列", "短期均線在上", "均線向上發散"]
+    },
+    "STG004": {
+      "name": "RSI超賣反彈",
+      "type": "technical",
+      "entry_condition": "RSI<30 且開始向上",
+      "exit_condition": "RSI>70 或 觸及停利",
+      "stop_loss": 10,
+      "stop_profit": 18,
+      "risk_level": "高",
+      "keywords": ["RSI<30", "RSI超賣", "低檔反彈", "RSI黃金交叉", "RSI低檔"]
+    },
+    "STG005": {
+      "name": "MACD黃金交叉",
+      "type": "technical",
+      "entry_condition": "DIF向上突破DEA 且 MACD>0",
+      "exit_condition": "MACD<0 或 觸及停利",
+      "stop_loss": 8,
+      "stop_profit": 20,
+      "risk_level": "中",
+      "keywords": ["MACD>0", "DIF向上突破", "MACD黃金交叉", "柱狀體翻正", "DIF>DEA"]
+    },
+    "STG006": {
+      "name": "價量齊揚",
+      "type": "technical",
+      "entry_condition": "股價上漲 且 成交量>5日均量1.5倍",
+      "exit_condition": "價跌量縮 或 觸及停利",
+      "stop_loss": 7,
+      "stop_profit": 22,
+      "risk_level": "中",
+      "keywords": ["成交量放大", "價量配合", "帶量上漲", "成交量>5日均量", "攻擊量"]
+    },
+    "STG007": {
+      "name": "突破整理平台",
+      "type": "technical",
+      "entry_condition": "股價突破盤整區間高點",
+      "exit_condition": "跌破平台低點 或 觸及停利",
+      "stop_loss": 8,
+      "stop_profit": 25,
+      "risk_level": "中",
+      "keywords": ["突破盤整", "區間突破", "整理平台", "橫盤突破", "盤整結束"]
+    },
+    "STG008": {
+      "name": "殖利率策略",
+      "type": "fundamental",
+      "entry_condition": "殖利率>5% 且穩定配息",
+      "exit_condition": "殖利率<3% 或 基本面惡化",
+      "stop_loss": 15,
+      "stop_profit": 30,
+      "risk_level": "低",
+      "keywords": ["高殖利率", "股息", "現金股利", "殖利率>5%", "除權息"]
+    },
+    "STG009": {
+      "name": "營收成長",
+      "type": "fundamental",
+      "entry_condition": "營收月增率>20% 或 年增率>30%",
+      "exit_condition": "營收衰退 或 觸及停利",
+      "stop_loss": 12,
+      "stop_profit": 35,
+      "risk_level": "中",
+      "keywords": ["月增率", "年增率", "營收創高", "成長股", "營收雙增"]
+    }
+  },
+  "telegram": {
+    "bot_token": "8294937993:AAFOY_rwU33p6ndhFrnDyjKFrSQ-_1KavOE",
+    "chat_id": "8137433836"
+  },
+  "schedule": {
+    "morning": "08:30",
+    "monitor": ["09:30", "10:30", "11:30", "13:00", "14:00"],
+    "evening": "15:00"
+  },
+  "alert": {
+    "gain_threshold": 10,
+    "loss_threshold": 5
+  },
+  "database": {
+    "path": "data/stock_data.db"
+  }
+}
