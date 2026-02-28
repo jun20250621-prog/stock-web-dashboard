@@ -117,9 +117,13 @@ def api_watchlist():
                 if price_data and len(price_data) > 0:
                     latest = price_data[-1]
                     current_price = latest.get('close', 0)
-                    spread = latest.get('spread', 0) or 0
-                    change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
+                    # 計算漲跌幅
+                    if len(price_data) >= 2:
+                        prev_price = price_data[-2].get('close', current_price)
+                        if prev_price > 0:
+                            change_pct = ((current_price - prev_price) / prev_price) * 100
             except Exception as e:
+                print(f"Error getting price for {code}: {e}")
                 current_price = 0
                 change_pct = 0
             stocks.append({
