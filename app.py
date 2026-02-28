@@ -105,27 +105,30 @@ def api_portfolio():
 
 @app.route('/api/watchlist')
 def api_watchlist():
+    import logging
+    logger = logging.getLogger()
     try:
         watchlist = wm.get_all()
         stocks = []
         for item in watchlist:
             code = item.get('code')
+            current_price = 0
+            change_pct = 0
             try:
-                price_data = screener.get_daily_price(code, 1)
-                current_price = 0
-                change_pct = 0
+                price_data = screener.get_daily_price(code, 5)
                 if price_data and len(price_data) > 0:
                     latest = price_data[-1]
                     current_price = latest.get('close', 0)
                     # 計算漲跌幅
                     if len(price_data) >= 2:
                         prev_price = price_data[-2].get('close', current_price)
-                        if prev_price > 0:
+                        if prev_price and prev_price > 0:
                             change_pct = ((current_price - prev_price) / prev_price) * 100
             except Exception as e:
-                print(f"Error getting price for {code}: {e}")
+                logger.error(f"Error getting price for {code}: {e}")
                 current_price = 0
                 change_pct = 0
+            
             stocks.append({
                 'code': code,
                 'name': item.get('name'),
@@ -138,6 +141,7 @@ def api_watchlist():
             })
         return jsonify(stocks)
     except Exception as e:
+        logger.error(f"Error in api_watchlist: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/trades')
