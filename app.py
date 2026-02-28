@@ -426,30 +426,55 @@ def api_import_trades():
         excel_data = base64.b64decode(b64_data)
         df = pd.read_excel(io.BytesIO(excel_data))
         
+        # 支援的中文/英文欄位名稱映射
+        col_map = {
+            'code': ['股票代碼', 'code', 'Code', '代碼'],
+            'name': ['股票名稱', 'name', 'Name', '名稱'],
+            'buy_date': ['買入日期', 'buy_date', 'Buy Date', '買日'],
+            'buy_price': ['買入價格', 'buy_price', 'Buy Price', '買價'],
+            'sell_date': ['賣出日期', 'sell_date', 'Sell Date', '賣日'],
+            'sell_price': ['賣出價格', 'sell_price', 'Sell Price', '賣價'],
+            'shares': ['股數', 'shares', 'Shares', '數量'],
+            'result': ['結果', 'result', 'Result', '勝敗'],
+            'discipline': ['紀律', 'discipline', 'Discipline'],
+            'entry_strategy_id': ['策略', 'strategy', 'Strategy', 'entry_strategy_id']
+        }
+        
+        def get_val(row, keys):
+            for k in keys:
+                if k in row.index:
+                    val = row[k]
+                    if pd.notna(val):
+                        return val
+            return None
+        
         # 匯入每一筆
         count = 0
-        for _, row in df.iterrows():
+        errors = []
+        for idx, row in df.iterrows():
             try:
                 trade_data = {
-                    'code': str(row.get('股票代碼', '')),
-                    'name': str(row.get('股票名稱', '')),
-                    'buy_date': str(row.get('買入日期', '')),
-                    'buy_price': float(row.get('買入價格', 0)) if pd.notna(row.get('買入價格')) else None,
-                    'sell_date': str(row.get('賣出日期', '')) if pd.notna(row.get('賣出日期')) else None,
-                    'sell_price': float(row.get('賣出價格', 0)) if pd.notna(row.get('賣出價格')) else None,
-                    'shares': int(row.get('股數', 0)) if pd.notna(row.get('股數')) else None,
-                    'result': str(row.get('結果', '')),
-                    'discipline': str(row.get('紀律', '')),
-                    'entry_strategy_id': str(row.get('策略', ''))
+                    'code': str(get_val(row, col_map['code']) or ''),
+                    'name': str(get_val(row, col_map['name']) or ''),
+                    'buy_date': str(get_val(row, col_map['buy_date']) or ''),
+                    'buy_price': float(get_val(row, col_map['buy_price'])) if get_val(row, col_map['buy_price']) else None,
+                    'sell_date': str(get_val(row, col_map['sell_date'])) if get_val(row, col_map['sell_date']) else None,
+                    'sell_price': float(get_val(row, col_map['sell_price'])) if get_val(row, col_map['sell_price']) else None,
+                    'shares': int(get_val(row, col_map['shares'])) if get_val(row, col_map['shares']) else None,
+                    'result': str(get_val(row, col_map['result']) or ''),
+                    'discipline': str(get_val(row, col_map['discipline']) or ''),
+                    'entry_strategy_id': str(get_val(row, col_map['entry_strategy_id']) or '')
                 }
-                if trade_data['code']:
+                if trade_data['code'] and trade_data['code'] != 'nan':
                     tj.add_trade(trade_data)
                     count += 1
-            except:
-                pass
+                else:
+                    errors.append(f'Row {idx+1}: Missing code')
+            except Exception as e:
+                errors.append(f'Row {idx+1}: {str(e)}')
         
         reload_config()
-        return jsonify({'success': True, 'count': count})
+        return jsonify({'success': True, 'count': count, 'errors': errors[:5] if errors else []})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -467,26 +492,47 @@ def api_import_watchlist():
         excel_data = base64.b64decode(b64_data)
         df = pd.read_excel(io.BytesIO(excel_data))
         
+        # 支援的中文/英文欄位名稱映射
+        col_map = {
+            'code': ['股票代碼', 'code', 'Code', '代碼'],
+            'name': ['股票名稱', 'name', 'Name', '名稱'],
+            'target_price': ['目標價', 'target_price', 'Target Price', '目標'],
+            'reason': ['追蹤原因', 'reason', 'Reason', '原因'],
+            'industry': ['產業', 'industry', 'Industry'],
+            'add_date': ['新增日期', 'add_date', 'Add Date', '日期']
+        }
+        
+        def get_val(row, keys):
+            for k in keys:
+                if k in row.index:
+                    val = row[k]
+                    if pd.notna(val):
+                        return val
+            return None
+        
         # 匯入每一筆
         count = 0
-        for _, row in df.iterrows():
+        errors = []
+        for idx, row in df.iterrows():
             try:
                 item = {
-                    'code': str(row.get('股票代碼', '')),
-                    'name': str(row.get('股票名稱', '')),
-                    'target_price': float(row.get('目標價', 0)) if pd.notna(row.get('目標價')) else None,
-                    'reason': str(row.get('追蹤原因', '')),
-                    'industry': str(row.get('產業', '')),
-                    'add_date': str(row.get('新增日期', '')) or datetime.now().strftime('%Y-%m-%d')
+                    'code': str(get_val(row, col_map['code']) or ''),
+                    'name': str(get_val(row, col_map['name']) or ''),
+                    'target_price': float(get_val(row, col_map['target_price'])) if get_val(row, col_map['target_price']) else None,
+                    'reason': str(get_val(row, col_map['reason']) or ''),
+                    'industry': str(get_val(row, col_map['industry']) or ''),
+                    'add_date': str(get_val(row, col_map['add_date']) or datetime.now().strftime('%Y-%m-%d'))
                 }
-                if item['code']:
+                if item['code'] and item['code'] != 'nan':
                     wm.add(item)
                     count += 1
-            except:
-                pass
+                else:
+                    errors.append(f'Row {idx+1}: Missing code')
+            except Exception as e:
+                errors.append(f'Row {idx+1}: {str(e)}')
         
         reload_config()
-        return jsonify({'success': True, 'count': count})
+        return jsonify({'success': True, 'count': count, 'errors': errors[:5] if errors else []})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
