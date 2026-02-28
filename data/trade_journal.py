@@ -254,8 +254,8 @@ class TradeJournal:
         success = len([t for t in trades if t.get('result') == '成功'])
         failure = len([t for t in trades if t.get('result') == '失敗'])
         
-        total_pl = sum([t.get('profit_loss', 0) for t in trades if t.get('profit_loss')])
-        avg_pl_pct = sum([t.get('profit_loss_pct', 0) for t in trades if t.get('profit_loss_pct')]) / total if total > 0 else 0
+        total_pl = sum([t.get('profit_loss', 0) or 0 for t in trades if t.get('profit_loss')])
+        avg_pl_pct = sum([t.get('profit_loss_pct', 0) or 0 for t in trades if t.get('profit_loss_pct')]) / total if total > 0 else 0
         
         # 紀律分析
         discipline_analysis = self._analyze_discipline(trades)
@@ -290,14 +290,14 @@ class TradeJournal:
             
             total = len(trades_list)
             success = len([t for t in trades_list if t.get('result') == '成功'])
-            avg_pl = sum([t.get('profit_loss_pct', 0) for t in trades_list]) / total if total > 0 else 0
+            avg_pl = sum([t.get('profit_loss_pct', 0) or 0 for t in trades_list]) / total if total > 0 else 0
             
             result[disc] = {
                 'count': total,
                 'success_count': success,
                 'success_rate': (success / total * 100) if total > 0 else 0,
                 'avg_profit_loss_pct': avg_pl,
-                'total_profit_loss': sum([t.get('profit_loss', 0) for t in trades_list])
+                'total_profit_loss': sum([t.get('profit_loss', 0) or 0 for t in trades_list])
             }
         
         return result
@@ -318,14 +318,14 @@ class TradeJournal:
             
             total = len(trades_list)
             success = len([t for t in trades_list if t.get('result') == '成功'])
-            avg_pl = sum([t.get('profit_loss_pct', 0) for t in trades_list]) / total if total > 0 else 0
+            avg_pl = sum([t.get('profit_loss_pct', 0) or 0 for t in trades_list]) / total if total > 0 else 0
             
             result[strategy_id] = {
                 'count': total,
                 'success_count': success,
                 'success_rate': (success / total * 100) if total > 0 else 0,
                 'avg_profit_loss_pct': avg_pl,
-                'total_profit_loss': sum([t.get('profit_loss', 0) for t in trades_list])
+                'total_profit_loss': sum([t.get('profit_loss', 0) or 0 for t in trades_list])
             }
         
         return result
