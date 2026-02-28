@@ -61,7 +61,7 @@
                         <span><i class="fas fa-wallet me-2"></i>持股名單</span>
                         <div><button class="btn btn-sm btn-success me-1" onclick="showAddPortfolio()"><i class="fas fa-plus"></i>新增</button><button class="btn btn-sm btn-outline-primary" onclick="exportPortfolio()"><i class="fas fa-download"></i>匯出</button></div>
                     </div>
-                    <div class="card-body"><table class="table table-hover" id="portfolioTable"><thead><tr><th>股票</th><th>成本</th><th>現價</th><th>漲跌幅</th><th>損益</th><th>損益率</th><th>策略</th><th>操作</th></tr></thead><tbody></tbody></table></div>
+                    <div class="card-body"><table class="table table-hover" id="portfolioTable"><thead><tr><th>股票</th><th>成本</th><th>現價</th><th>漲跌幅</th><th>損益</th><th>損益率</th><th>產業</th><th>應用</th><th>買入日</th><th>操作</th></tr></thead><tbody></tbody></table></div>
                 </div>
             </div>
             <div class="tab-pane fade" id="watchlist">
@@ -72,7 +72,7 @@
                         <button class="btn btn-sm btn-outline-primary me-1" onclick="exportWatchlist()"><i class="fas fa-download"></i>匯出</button>
                         <label class="btn btn-sm btn-outline-secondary mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importWatchlist(this)"></label>
                     </div>
-                    <div class="card-body"><table class="table table-hover" id="watchlistTable"><thead><tr><th>股票</th><th>現價</th><th>目標價</th><th>漲跌幅</th><th>追蹤原因</th><th>操作</th></tr></thead><tbody></tbody></table></div>
+                    <div class="card-body"><table class="table table-hover" id="watchlistTable"><thead><tr><th>股票</th><th>現價</th><th>目標價</th><th>漲跌幅</th><th>產業</th><th>追蹤原因</th><th>新增日</th><th>操作</th></tr></thead><tbody></tbody></table></div>
                 </div>
             </div>
             <div class="tab-pane fade" id="trades">
@@ -85,7 +85,7 @@
                             <label class="btn btn-sm btn-outline-secondary mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importTrades(this)"></label>
                         </div>
                     </div>
-                    <div class="card-body"><table class="table table-hover" id="tradesTable"><thead><tr><th>股票</th><th>買入日期</th><th>買入價格</th><th>賣出日期</th><th>賣出價格</th><th>損益</th><th>紀律</th><th>操作</th></tr></thead><tbody></tbody></table></div>
+                    <div class="card-body"><table class="table table-hover" id="tradesTable"><thead><tr><th>股票</th><th>買入日期</th><th>買入價格</th><th>股數</th><th>賣出日期</th><th>賣出價格</th><th>損益</th><th>結果</th><th>紀律</th><th>策略</th><th>操作</th></tr></thead><tbody></tbody></table></div>
                 </div>
             </div>
             <div class="tab-pane fade" id="analysis">
@@ -200,9 +200,9 @@
                 totalValue += (s.current_price||0)*1000; totalCost += (s.cost||0)*1000;
                 const pc = (s.profit_loss||0)>=0?'profit-positive':'profit-negative';
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
-                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.strategy||''}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
-            document.querySelector('#portfolioTable tbody').innerHTML = html || '<tr><td colspan="8" class="text-center">無持股資料</td></tr>';
+            document.querySelector('#portfolioTable tbody').innerHTML = html || '<tr><td colspan="10" class="text-center">無持股資料</td></tr>';
             const totalPL = totalValue-totalCost, totalPLPct = totalCost>0?totalPL/totalCost*100:0;
             document.getElementById('totalValue').textContent = '$'+totalValue.toLocaleString();
             document.getElementById('totalPL').textContent = (totalPL>=0?'+':'')+totalPL.toLocaleString();
@@ -238,9 +238,9 @@
             watchlistData = await resp.json();
             let html = ''; watchlistData.forEach(s => {
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
-                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.current_price||'-'}</td><td>${s.target_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td>${s.reason||''}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editWatchlist('${s.code}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteWatchlist('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.current_price||'-'}</td><td>${s.target_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.reason||''}</td><td>${s.add_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editWatchlist('${s.code}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteWatchlist('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
-            document.querySelector('#watchlistTable tbody').innerHTML = html || '<tr><td colspan="6" class="text-center">無觀察名單</td></tr>';
+            document.querySelector('#watchlistTable tbody').innerHTML = html || '<tr><td colspan="8" class="text-center">無觀察名單</td></tr>';
         }catch(e){ console.error(e); }
     }
 
@@ -250,9 +250,10 @@
             tradesData = await resp.json();
             let html = ''; tradesData.forEach(t => {
                 const pc = (t.profit_loss||0)>=0?'profit-positive':'profit-negative';
-                html += `<tr><td><b>${t.code}</b> ${t.name||''}</td><td>${t.buy_date||'-'}</td><td>${t.buy_price||'-'}</td><td>${t.sell_date||'-'}</td><td>${t.sell_price||'-'}</td><td class="${pc}">${(t.profit_loss||0)>=0?'+':''}${(t.profit_loss||0).toFixed(2)}</td><td>${t.discipline||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editTrade('${t.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteTrade('${t.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                const resultClass = t.result==='成功'?'profit-positive':(t.result==='失敗'?'profit-negative':'');
+                html += `<tr><td><b>${t.code}</b> ${t.name||''}</td><td>${t.buy_date||'-'}</td><td>${t.buy_price||'-'}</td><td>${t.shares||'-'}</td><td>${t.sell_date||'-'}</td><td>${t.sell_price||'-'}</td><td class="${pc}">${(t.profit_loss||0)>=0?'+':''}${(t.profit_loss||0).toFixed(2)}</td><td class="${resultClass}">${t.result||'-'}</td><td>${t.discipline||'-'}</td><td>${t.entry_strategy_id||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editTrade('${t.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteTrade('${t.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
-            document.querySelector('#tradesTable tbody').innerHTML = html || '<tr><td colspan="8" class="text-center">無交易紀錄</td></tr>';
+            document.querySelector('#tradesTable tbody').innerHTML = html || '<tr><td colspan="11" class="text-center">無交易紀錄</td></tr>';
         }catch(e){ console.error(e); }
     }
 
@@ -334,35 +335,91 @@
     function showAddPortfolio(){
         document.getElementById('modalTitle').textContent = '新增持股';
         document.getElementById('modalBody').innerHTML = `
-            <div class="mb-2"><label>股票代碼</label><input class="form-control" id="pCode"></div>
-            <div class="mb-2"><label>股票名稱</label><input class="form-control" id="pName"></div>
-            <div class="mb-2"><label>成本價</label><input class="form-control" id="pCost" type="number"></div>
-            <div class="mb-2"><label>股數</label><input class="form-control" id="pShares" type="number" value="1000"></div>
-            <div class="mb-2"><label>停損價</label><input class="form-control" id="pStopLoss" type="number"></div>
-            <div class="mb-2"><label>停利價</label><input class="form-control" id="pStopProfit" type="number"></div>
+            <div class="row"><div class="col mb-2"><label>股票代碼</label><input class="form-control" id="pCode" onchange="fetchStockInfo(this.value)"></div><div class="col mb-2"><label>股票名稱</label><input class="form-control" id="pName"></div></div>
+            <div class="row"><div class="col mb-2"><label>成本價</label><input class="form-control" id="pCost" type="number"></div><div class="col mb-2"><label>股數</label><input class="form-control" id="pShares" type="number" value="1000"></div></div>
+            <div class="row"><div class="col mb-2"><label>停損價</label><input class="form-control" id="pStopLoss" type="number"></div><div class="col mb-2"><label>停利價</label><input class="form-control" id="pStopProfit" type="number"></div></div>
+            <div class="row"><div class="col mb-2"><label>產業</label><select class="form-control" id="pIndustry"><option value="">請選擇...</option><option value="半導體">半導體</option><option value="IC設計">IC設計</option><option value="電子">電子</option><option value="光電">光電</option><option value="通訊">通訊</option><option value="航太">航太</option><option value="散熱">散熱</option><option value="氣動">氣動</option><option value="電源">電源</option><option value="其他">其他</option></select></div><div class="col mb-2"><label>應用</label><select class="form-control" id="pApplication"><option value="">請選擇...</option><option value="AI/高效能運算">AI/高效能運算</option><option value="AI伺服器">AI伺服器</option><option value="AI/手機晶片">AI/手機晶片</option><option value="AI/顯示驅動">AI/顯示驅動</option><option value="AI先進封裝">AI先進封裝</option><option value="AI/周邊晶片">AI/周邊晶片</option><option value="IC通路">IC通路</option><option value="光通訊">光通訊</option><option value="飛機維修">飛機維修</option><option value="自動化設備">自動化設備</option><option value="資料中心需求">資料中心需求</option><option value="PC/AI">PC/AI</option><option value="蘋果供應鏈">蘋果供應鏈</option><option value="車用">車用</option><option value="其他">其他</option></select></div></div>
+            <div class="mb-2"><label>買入日期</label><input class="form-control" id="pBuyDate" type="date"></div>
         `;
         document.getElementById('modalSave').onclick = async () => {
-            const data = {code:document.getElementById('pCode').value, name:document.getElementById('pName').value, cost:parseFloat(document.getElementById('pCost').value), shares:parseInt(document.getElementById('pShares').value), stop_loss:parseFloat(document.getElementById('pStopLoss').value), stop_profit:parseFloat(document.getElementById('pStopProfit').value)};
+            const data = {code:document.getElementById('pCode').value, name:document.getElementById('pName').value, cost:parseFloat(document.getElementById('pCost').value), shares:parseInt(document.getElementById('pShares').value), stop_loss:parseFloat(document.getElementById('pStopLoss').value), stop_profit:parseFloat(document.getElementById('pStopProfit').value), industry:document.getElementById('pIndustry').value, application:document.getElementById('pApplication').value, buy_date:document.getElementById('pBuyDate').value};
             await fetch('/api/portfolio/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             modal.hide(); loadPortfolio();
         };
         modal.show();
     }
 
+    function fetchStockInfo(code){
+        // 自動帶入股票名稱和產業（如果有快取資料）
+        const stockMap = {
+            '2330': {name:'台積電', industry:'半導體', application:'AI/高效能運算'},
+            '2454': {name:'聯發科', industry:'IC設計', application:'AI/手機晶片'},
+            '2317': {name:'鴻海', industry:'電子', application:'AI伺服器/蘋果供應鏈'},
+            '2382': {name:'廣達', industry:'電子', application:'AI伺服器'},
+            '3711': {name:'日月光', industry:'半導體', application:'AI先進封裝'},
+            '3034': {name:'聯詠', industry:'IC設計', application:'AI/顯示驅動'},
+            '4952': {name:'凌通', industry:'IC設計', application:'AI/周邊晶片'},
+            '3017': {name:'奇鋐', industry:'散熱', application:'AI伺服器/車用'},
+            '3231': {name:'緯創', industry:'電子', application:'AI伺服器'},
+            '2356': {name:'英業達', industry:'電子', application:'AI伺服器'},
+            '2353': {name:'宏碁', industry:'電子', application:'PC/AI'},
+            '6282': {name:'康舒', industry:'電源', application:'電源供應器'},
+            '4909': {name:'新復興', industry:'通訊', application:'光纖/網通'},
+            '4908': {name:'前鼎', industry:'光電', application:'光通訊'},
+            '4977': {name:'眾達-KY', industry:'光電', application:'資料中心需求'},
+            '1590': {name:'亞德客-KY', industry:'氣動', application:'自動化設備'},
+            '2630': {name:'亞航', industry:'航太', application:'飛機維修'},
+            '8112': {name:'至上', industry:'半導體', application:'IC通路'},
+            '2374': {name:'佳能', industry:'光電', application:'光學鏡頭'}
+        };
+        if(stockMap[code]){
+            document.getElementById('pName').value = stockMap[code].name;
+            document.getElementById('pIndustry').value = stockMap[code].industry;
+            document.getElementById('pApplication').value = stockMap[code].application;
+        }
+    }
+
     function showAddWatchlist(){
         document.getElementById('modalTitle').textContent = '新增觀察名單';
         document.getElementById('modalBody').innerHTML = `
-            <div class="mb-2"><label>股票代碼</label><input class="form-control" id="wCode"></div>
-            <div class="mb-2"><label>股票名稱</label><input class="form-control" id="wName"></div>
-            <div class="mb-2"><label>目標價</label><input class="form-control" id="wTarget" type="number"></div>
-            <div class="mb-2"><label>追蹤原因</label><textarea class="form-control" id="wReason"></textarea></div>
+            <div class="row"><div class="col mb-2"><label>股票代碼</label><input class="form-control" id="wCode" onchange="fetchWatchlistInfo(this.value)"></div><div class="col mb-2"><label>股票名稱</label><input class="form-control" id="wName"></div></div>
+            <div class="row"><div class="col mb-2"><label>目標價</label><input class="form-control" id="wTarget" type="number"></div><div class="col mb-2"><label>產業</label><select class="form-control" id="wIndustry"><option value="">請選擇...</option><option value="半導體">半導體</option><option value="IC設計">IC設計</option><option value="電子">電子</option><option value="光電">光電</option><option value="通訊">通訊</option><option value="航太">航太</option><option value="散熱">散熱</option><option value="氣動">氣動</option><option value="電源">電源</option><option value="其他">其他</option></select></div></div>
+            <div class="row"><div class="col mb-2"><label>追蹤原因</label><textarea class="form-control" id="wReason"></textarea></div><div class="col mb-2"><label>新增日期</label><input class="form-control" id="wAddDate" type="date"></div></div>
         `;
         document.getElementById('modalSave').onclick = async () => {
-            const data = {code:document.getElementById('wCode').value, name:document.getElementById('wName').value, target_price:parseFloat(document.getElementById('wTarget').value), reason:document.getElementById('wReason').value, add_date:new Date().toISOString().split('T')[0]};
+            const data = {code:document.getElementById('wCode').value, name:document.getElementById('wName').value, target_price:parseFloat(document.getElementById('wTarget').value), reason:document.getElementById('wReason').value, industry:document.getElementById('wIndustry').value, add_date:document.getElementById('wAddDate').value || new Date().toISOString().split('T')[0]};
             await fetch('/api/watchlist/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             modal.hide(); loadWatchlist();
         };
         modal.show();
+    }
+
+    function fetchWatchlistInfo(code){
+        const stockMap = {
+            '2330': {name:'台積電', industry:'半導體'},
+            '2454': {name:'聯發科', industry:'IC設計'},
+            '2317': {name:'鴻海', industry:'電子'},
+            '2382': {name:'廣達', industry:'電子'},
+            '3711': {name:'日月光', industry:'半導體'},
+            '3034': {name:'聯詠', industry:'IC設計'},
+            '4952': {name:'凌通', industry:'IC設計'},
+            '3017': {name:'奇鋐', industry:'散熱'},
+            '3231': {name:'緯創', industry:'電子'},
+            '2356': {name:'英業達', industry:'電子'},
+            '2353': {name:'宏碁', industry:'電子'},
+            '6282': {name:'康舒', industry:'電源'},
+            '4909': {name:'新復興', industry:'通訊'},
+            '4908': {name:'前鼎', industry:'光電'},
+            '4977': {name:'眾達-KY', industry:'光電'},
+            '1590': {name:'亞德客-KY', industry:'氣動'},
+            '2630': {name:'亞航', industry:'航太'},
+            '8112': {name:'至上', industry:'半導體'},
+            '2374': {name:'佳能', industry:'光電'}
+        };
+        if(stockMap[code]){
+            document.getElementById('wName').value = stockMap[code].name;
+            document.getElementById('wIndustry').value = stockMap[code].industry;
+        }
     }
 
     function editWatchlist(code){
@@ -388,11 +445,11 @@
             <div class="row"><div class="col mb-2"><label>股票代碼</label><input class="form-control" id="tCode"></div><div class="col mb-2"><label>股票名稱</label><input class="form-control" id="tName"></div></div>
             <div class="row"><div class="col mb-2"><label>買入日期</label><input class="form-control" id="tBuyDate" type="date"></div><div class="col mb-2"><label>買入價格</label><input class="form-control" id="tBuyPrice" type="number"></div></div>
             <div class="row"><div class="col mb-2"><label>賣出日期</label><input class="form-control" id="tSellDate" type="date"></div><div class="col mb-2"><label>賣出價格</label><input class="form-control" id="tSellPrice" type="number"></div></div>
-            <div class="row"><div class="col mb-2"><label>股數</label><input class="form-control" id="tShares" type="number"></div><div class="col mb-2"><label>紀律</label><select class="form-control" id="tDiscipline"><option>完全遵守</option><option>部分遵守</option><option>未遵守</option></select></div></div>
-            <div class="mb-2"><label>結果</label><select class="form-control" id="tResult"><option>成功</option><option>失敗</option><option>持平</option></select></div>
+            <div class="row"><div class="col mb-2"><label>股數</label><input class="form-control" id="tShares" type="number" value="1000"></div><div class="col mb-2"><label>紀律</label><select class="form-control" id="tDiscipline"><option>完全遵守</option><option>部分遵守</option><option>未遵守</option></select></div></div>
+            <div class="row"><div class="col mb-2"><label>結果</label><select class="form-control" id="tResult"><option value="">待平倉</option><option>成功</option><option>失敗</option><option>持平</option></select></div><div class="col mb-2"><label>策略</label><select class="form-control" id="tStrategy"><option value="">請選擇...</option><option value="STG001">KD黃金交叉</option><option value="STG002">KD死亡交叉</option><option value="STG003">MA多頭排列</option><option value="STG004">RSI超賣反彈</option><option value="STG005">MACD黃金交叉</option><option value="STG006">價量齊揚</option><option value="STG007">突破整理平台</option><option value="STG008">殖利率策略</option><option value="STG009">營收成長</option></select></div></div>
         `;
         document.getElementById('modalSave').onclick = async () => {
-            const data = {code:document.getElementById('tCode').value, name:document.getElementById('tName').value, type:'買入', buy_date:document.getElementById('tBuyDate').value, buy_price:parseFloat(document.getElementById('tBuyPrice').value), sell_date:document.getElementById('tSellDate').value, sell_price:parseFloat(document.getElementById('tSellPrice').value), shares:parseInt(document.getElementById('tShares').value), discipline:document.getElementById('tDiscipline').value, result:document.getElementById('tResult').value};
+            const data = {code:document.getElementById('tCode').value, name:document.getElementById('tName').value, type:'買入', buy_date:document.getElementById('tBuyDate').value, buy_price:parseFloat(document.getElementById('tBuyPrice').value), sell_date:document.getElementById('tSellDate').value, sell_price:parseFloat(document.getElementById('tSellPrice').value), shares:parseInt(document.getElementById('tShares').value), discipline:document.getElementById('tDiscipline').value, result:document.getElementById('tResult').value, entry_strategy_id:document.getElementById('tStrategy').value};
             await fetch('/api/trade/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             modal.hide(); loadTrades(); loadAnalysis();
         };
@@ -407,10 +464,10 @@
             <div class="row"><div class="col mb-2"><label>買入日期</label><input class="form-control" id="tBuyDate" type="date" value="${t.buy_date||''}"></div><div class="col mb-2"><label>買入價格</label><input class="form-control" id="tBuyPrice" type="number" value="${t.buy_price||''}"></div></div>
             <div class="row"><div class="col mb-2"><label>賣出日期</label><input class="form-control" id="tSellDate" type="date" value="${t.sell_date||''}"></div><div class="col mb-2"><label>賣出價格</label><input class="form-control" id="tSellPrice" type="number" value="${t.sell_price||''}"></div></div>
             <div class="row"><div class="col mb-2"><label>股數</label><input class="form-control" id="tShares" type="number" value="${t.shares||1000}"></div><div class="col mb-2"><label>紀律</label><select class="form-control" id="tDiscipline"><option ${t.discipline=='完全遵守'?'selected':''}>完全遵守</option><option ${t.discipline=='部分遵守'?'selected':''}>部分遵守</option><option ${t.discipline=='未遵守'?'selected':''}>未遵守</option></select></div></div>
-            <div class="mb-2"><label>結果</label><select class="form-control" id="tResult"><option ${t.result=='成功'?'selected':''}>成功</option><option ${t.result=='失敗'?'selected':''}>失敗</option><option ${t.result=='持平'?'selected':''}>持平</option></select></div>
+            <div class="row"><div class="col mb-2"><label>結果</label><select class="form-control" id="tResult"><option ${t.result==''?'selected':''} value="">待平倉</option><option ${t.result=='成功'?'selected':''}>成功</option><option ${t.result=='失敗'?'selected':''}>失敗</option><option ${t.result=='持平'?'selected':''}>持平</option></select></div><div class="col mb-2"><label>策略</label><select class="form-control" id="tStrategy"><option value="">請選擇...</option><option value="STG001" ${t.entry_strategy_id=='STG001'?'selected':''}>KD黃金交叉</option><option value="STG002" ${t.entry_strategy_id=='STG002'?'selected':''}>KD死亡交叉</option><option value="STG003" ${t.entry_strategy_id=='STG003'?'selected':''}>MA多頭排列</option><option value="STG004" ${t.entry_strategy_id=='STG004'?'selected':''}>RSI超賣反彈</option><option value="STG005" ${t.entry_strategy_id=='STG005'?'selected':''}>MACD黃金交叉</option><option value="STG006" ${t.entry_strategy_id=='STG006'?'selected':''}>價量齊揚</option><option value="STG007" ${t.entry_strategy_id=='STG007'?'selected':''}>突破整理平台</option><option value="STG008" ${t.entry_strategy_id=='STG008'?'selected':''}>殖利率策略</option><option value="STG009" ${t.entry_strategy_id=='STG009'?'selected':''}>營收成長</option></select></div></div>
         `;
         document.getElementById('modalSave').onclick = async () => {
-            const data = {code:document.getElementById('tCode').value, name:document.getElementById('tName').value, buy_date:document.getElementById('tBuyDate').value, buy_price:parseFloat(document.getElementById('tBuyPrice').value), sell_date:document.getElementById('tSellDate').value, sell_price:parseFloat(document.getElementById('tSellPrice').value), shares:parseInt(document.getElementById('tShares').value), discipline:document.getElementById('tDiscipline').value, result:document.getElementById('tResult').value};
+            const data = {code:document.getElementById('tCode').value, name:document.getElementById('tName').value, buy_date:document.getElementById('tBuyDate').value, buy_price:parseFloat(document.getElementById('tBuyPrice').value), sell_date:document.getElementById('tSellDate').value, sell_price:parseFloat(document.getElementById('tSellPrice').value), shares:parseInt(document.getElementById('tShares').value), discipline:document.getElementById('tDiscipline').value, result:document.getElementById('tResult').value, entry_strategy_id:document.getElementById('tStrategy').value};
             await fetch('/api/trade/update/'+id, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             modal.hide(); loadTrades(); loadAnalysis();
         };
