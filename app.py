@@ -222,31 +222,32 @@ def api_strong_stocks():
         results = []
         for stock in popular_stocks:
             try:
-                price_data = screener.get_daily_price(stock['code'], 5)
-                if price_data and len(price_data) >= 2:
-                    current = price_data[-1].get('close', 0)
-                    prev = price_data[-2].get('close', current)
-                    change_pct = ((current - prev) / prev * 100) if prev > 0 else 0
-                    
-                    # 計算5日動能
-                    returns = []
-                    for i in range(1, min(6, len(price_data))):
-                        p1 = price_data[i-1].get('close', 0)
-                        p2 = price_data[i].get('close', 0)
-                        if p1 > 0:
-                            returns.append((p2 - p1) / p1 * 100)
-                    momentum_5d = sum(returns) / len(returns) if returns else 0
-                    
-                    results.append({
-                        'code': stock['code'],
-                        'name': stock['name'],
-                        'industry': stock['industry'],
-                        'price': current,
-                        'change_pct': round(change_pct, 2),
-                        'momentum_5d': round(momentum_5d, 2)
-                    })
+                data = screener.get_daily_price(stock['code'], 10)
+                if data and 'prices' in data:
+                    prices = data.get('prices', [])
+                    if len(prices) >= 2:
+                        current = prices[-1]
+                        prev = prices[-2]
+                        change_pct = ((current - prev) / prev * 100) if prev > 0 else 0
+                        
+                        # 計算5日動能
+                        momentum_5d = 0
+                        if len(prices) >= 6:
+                            p_start = prices[-6]
+                            p_end = prices[-1]
+                            if p_start > 0:
+                                momentum_5d = ((p_end - p_start) / p_start) * 100
+                        
+                        results.append({
+                            'code': stock['code'],
+                            'name': stock['name'],
+                            'industry': stock['industry'],
+                            'price': current,
+                            'change_pct': round(change_pct, 2),
+                            'momentum_5d': round(momentum_5d, 2)
+                        })
             except Exception as e:
-                print(f"Error getting {stock['code']}: {e}")
+                print(f"Error: {e}")
         
         # 按動能排序
         results.sort(key=lambda x: x.get('momentum_5d', 0), reverse=True)
