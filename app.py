@@ -222,9 +222,13 @@ def api_watchlist_delete(code):
 
 @app.route('/api/watchlist/update/<code>', methods=['POST'])
 def api_watchlist_update(code):
-    data = request.json
-    wm.update(code, data)
-    return jsonify({'success': True})
+    try:
+        data = request.json
+        wm.update(code, data)
+        return jsonify({'success': True})
+    except Exception as e:
+        import traceback
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 @app.route('/api/trade/add', methods=['POST'])
 def api_trade_add():
@@ -237,9 +241,13 @@ def api_trade_add():
 
 @app.route('/api/trade/update/<trade_id>', methods=['POST'])
 def api_trade_update(trade_id):
-    data = request.json
-    tj.update_trade(trade_id, data)
-    return jsonify({'success': True})
+    try:
+        data = request.json
+        tj.update_trade(trade_id, data)
+        return jsonify({'success': True})
+    except Exception as e:
+        import traceback
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 @app.route('/api/trade/delete/<trade_id>', methods=['POST'])
 def api_trade_delete(trade_id):
