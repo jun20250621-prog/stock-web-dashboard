@@ -196,6 +196,12 @@ def api_stock(code):
 
 @app.route('/api/strong_stocks')
 def api_strong_stocks():
+    # 初始化 screener
+    if not screener:
+        from data.fetcher import TaiwanStockScreener
+        global screener
+        screener = TaiwanStockScreener(config)
+    
     # 熱門股票列表
     popular_stocks = [
         {'code': '2330', 'name': '台積電', 'industry': '半導體'},
