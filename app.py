@@ -223,18 +223,19 @@ def api_strong_stocks():
         for stock in popular_stocks:
             try:
                 data = screener.get_daily_price(stock['code'], 10)
+                
                 if data and 'prices' in data:
                     prices = data.get('prices', [])
                     if len(prices) >= 2:
-                        current = prices[-1]
-                        prev = prices[-2]
+                        current = float(prices[-1])
+                        prev = float(prices[-2])
                         change_pct = ((current - prev) / prev * 100) if prev > 0 else 0
                         
                         # 計算5日動能
                         momentum_5d = 0
                         if len(prices) >= 6:
-                            p_start = prices[-6]
-                            p_end = prices[-1]
+                            p_start = float(prices[-6])
+                            p_end = float(prices[-1])
                             if p_start > 0:
                                 momentum_5d = ((p_end - p_start) / p_start) * 100
                         
@@ -246,9 +247,6 @@ def api_strong_stocks():
                             'change_pct': round(change_pct, 2),
                             'momentum_5d': round(momentum_5d, 2)
                         })
-                else:
-                    # Debug: print which stock has no data
-                    print(f"No data for {stock['code']}")
             except Exception as e:
                 print(f"Error: {stock['code']} - {e}")
         
