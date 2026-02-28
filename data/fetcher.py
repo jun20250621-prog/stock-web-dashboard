@@ -316,7 +316,7 @@ class TaiwanStockScreener:
         
         return None
     
-    def screen_strong_stocks(self, min_volume: int = 1000, min_price: float = 10) -> List[Dict]:
+    def screen_strong_stocks(self, min_volume: int = 1000, min_price: float = 10, limit: int = 20) -> List[Dict]:
         """篩選強勢股"""
         stocks = self.get_all_stocks()
         

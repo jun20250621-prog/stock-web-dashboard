@@ -288,8 +288,12 @@
     }
 
     async function loadStrongStocks(){
+        document.querySelector('#strongStocksTable tbody').innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> 載入中...</td></tr>';
         try{
-            const resp = await fetch('/api/strong_stocks');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            const resp = await fetch('/api/strong_stocks', {signal: controller.signal});
+            clearTimeout(timeoutId);
             const stocks = await resp.json();
             let html = ''; stocks.forEach((s,i) => {
                 const mc = (s.momentum_5d||0)>=0?'profit-positive':'profit-negative';
@@ -297,7 +301,10 @@
                 html += `<tr><td>${i+1}</td><td><b>${s.code}</b> ${s.name||''}</td><td>${s.industry||''}</td><td>${s.price||'-'}</td><td class="${mc}">${(s.momentum_5d||0).toFixed(2)}%</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td></tr>`;
             });
             document.querySelector('#strongStocksTable tbody').innerHTML = html || '<tr><td colspan="6" class="text-center">無資料</td></tr>';
-        }catch(e){ console.error(e); }
+        }catch(e){ 
+            console.error(e); 
+            document.querySelector('#strongStocksTable tbody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">載入超時，請稍後再試</td></tr>';
+        }
     }
 
     async function loadStockSelect(){

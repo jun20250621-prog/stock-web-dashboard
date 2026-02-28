@@ -200,8 +200,10 @@ def api_stock(code):
 def api_strong_stocks():
     min_volume = request.args.get('min_volume', default=1000, type=int)
     min_price = request.args.get('min_price', default=10, type=float)
-    stocks = screener.screen_strong_stocks(min_volume, min_price)
-    return jsonify(stocks)
+    # 只篩選熱門股票以加快速度
+    popular_stocks = ['2330','2454','2317','2382','3711','3034','4952','3017','3231','2356','2353','6282','4909','4908','4977','1590','2630','8112','2374']
+    stocks = screener.screen_strong_stocks(min_volume, min_price, limit=20)
+    return jsonify(stocks[:20] if len(stocks) > 20 else stocks)
 
 # ==================== 排程設定 API ====================
 
