@@ -112,9 +112,13 @@ def api_trades():
 
 @app.route('/api/trade_analysis')
 def api_trade_analysis():
-    year = request.args.get('year', type=int)
-    analysis = tj.analyze_performance(year)
-    return jsonify(analysis)
+    try:
+        year = request.args.get('year', type=int)
+        analysis = tj.analyze_performance(year)
+        return jsonify(analysis)
+    except Exception as e:
+        import traceback
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 @app.route('/api/strategies')
 def api_strategies():
