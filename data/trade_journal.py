@@ -197,6 +197,10 @@ class TradeJournal:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
+        # 計算 total_cost 如果有 buy_price 和 shares
+        if trade_data.get('buy_price') and trade_data.get('shares'):
+            trade_data['total_cost'] = trade_data['buy_price'] * trade_data['shares']
+        
         # 計算損益
         if trade_data.get('sell_price') and trade_data.get('shares'):
             total_revenue = trade_data['sell_price'] * trade_data['shares']
@@ -207,11 +211,20 @@ class TradeJournal:
                 trade_data['profit_loss'] = pl
                 trade_data['profit_loss_pct'] = pl_pct
         
+        # 計算持有天數
+        if trade_data.get('buy_date') and trade_data.get('sell_date'):
+            try:
+                buy = datetime.strptime(trade_data['buy_date'], '%Y-%m-%d')
+                sell = datetime.strptime(trade_data['sell_date'], '%Y-%m-%d')
+                trade_data['holding_days'] = (sell - buy).days
+            except:
+                pass
+        
         # 更新資料
         set_clauses = []
         params = []
         for key in ['code', 'name', 'type', 'buy_date', 'buy_price', 'sell_date', 'sell_price', 'shares', 'total_cost', 'total_revenue', 'profit_loss', 'profit_loss_pct', 'holding_days', 'entry_strategy_id', 'entry_reason', 'exit_strategy_id', 'exit_reason', 'result', 'success_reason', 'failure_reason', 'improvement', 'discipline', 'discipline_score', 'tags', 'notes']:
-            if key in trade_data:
+            if key in trade_data and trade_data.get(key) is not None:
                 set_clauses.append(f"{key} = ?")
                 params.append(trade_data[key])
         

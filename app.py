@@ -95,28 +95,35 @@ def api_portfolio():
 
 @app.route('/api/watchlist')
 def api_watchlist():
-    watchlist = wm.get_all()
-    stocks = []
-    for item in watchlist:
-        code = item.get('code')
-        price_data = screener.get_daily_price(code, 1)
-        current_price = 0
-        change_pct = 0
-        if price_data:
-            latest = price_data[-1]
-            current_price = latest.get('close', 0)
-            spread = latest.get('spread', 0) or 0
-            change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
-        stocks.append({
-            'code': code,
-            'name': item.get('name'),
-            'current_price': current_price,
-            'target_price': item.get('target_price'),
-            'change_pct': round(change_pct, 2),
-            'reason': item.get('reason', ''),
-            'industry': item.get('industry', '')
-        })
-    return jsonify(stocks)
+    try:
+        watchlist = wm.get_all()
+        stocks = []
+        for item in watchlist:
+            code = item.get('code')
+            try:
+                price_data = screener.get_daily_price(code, 1)
+                current_price = 0
+                change_pct = 0
+                if price_data and len(price_data) > 0:
+                    latest = price_data[-1]
+                    current_price = latest.get('close', 0)
+                    spread = latest.get('spread', 0) or 0
+                    change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
+            except Exception as e:
+                current_price = 0
+                change_pct = 0
+            stocks.append({
+                'code': code,
+                'name': item.get('name'),
+                'current_price': current_price,
+                'target_price': item.get('target_price'),
+                'change_pct': round(change_pct, 2),
+                'reason': item.get('reason', ''),
+                'industry': item.get('industry', '')
+            })
+        return jsonify(stocks)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/trades')
 def api_trades():
