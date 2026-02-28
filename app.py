@@ -233,10 +233,14 @@ def api_portfolio_add():
 
 @app.route('/api/portfolio/update/<code>', methods=['POST'])
 def api_portfolio_update(code):
-    data = request.json
-    pm.update(code, data)
-    reload_config()
-    return jsonify({'success': True})
+    try:
+        data = request.json
+        pm.update(code, data)
+        reload_config()
+        return jsonify({'success': True})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
 @app.route('/api/portfolio/delete/<code>', methods=['POST'])
 def api_portfolio_delete(code):
