@@ -61,7 +61,7 @@
                         <span><i class="fas fa-wallet me-2"></i>持股名單</span>
                         <div><button class="btn btn-sm btn-success me-1" onclick="showAddPortfolio()"><i class="fas fa-plus"></i>新增</button><button class="btn btn-sm btn-outline-primary me-1" onclick="exportPortfolio()"><i class="fas fa-download"></i>匯出</button><label class="btn btn-sm btn-outline-secondary mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importPortfolio(this)"></label></div>
                     </div>
-                    <div class="card-body"><table class="table table-hover" id="portfolioTable"><thead><tr><th>股票</th><th>成本</th><th>現價</th><th>漲跌幅</th><th>損益</th><th>損益率</th><th>產業</th><th>應用</th><th>買入日</th><th>操作</th></tr></thead><tbody></tbody></table></div>
+                    <div class="card-body"><table class="table table-hover" id="portfolioTable"><thead><tr><th>股票</th><th>股數</th><th>成本</th><th>現價</th><th>漲跌幅</th><th>損益</th><th>損益率</th><th>停損</th><th>停利</th><th>產業</th><th>應用</th><th>買入日</th><th>操作</th></tr></thead><tbody></tbody></table></div>
                 </div>
             </div>
             <div class="tab-pane fade" id="watchlist">
@@ -200,12 +200,12 @@
             portfolioData = await resp.json();
             let html = ''; let totalValue = 0, totalCost = 0;
             portfolioData.forEach(s => {
-                totalValue += (s.current_price||0)*1000; totalCost += (s.cost||0)*1000;
+                totalValue += (s.current_price||0)*(s.shares||1000); totalCost += (s.cost||0)*(s.shares||1000);
                 const pc = (s.profit_loss||0)>=0?'profit-positive':'profit-negative';
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
-                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.shares||'-'}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.stop_loss||'-'}</td><td>${s.stop_profit||'-'}</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
-            document.querySelector('#portfolioTable tbody').innerHTML = html || '<tr><td colspan="10" class="text-center">無持股資料</td></tr>';
+            document.querySelector('#portfolioTable tbody').innerHTML = html || '<tr><td colspan="13" class="text-center">無持股資料</td></tr>';
             const totalPL = totalValue-totalCost, totalPLPct = totalCost>0?totalPL/totalCost*100:0;
             document.getElementById('totalValue').textContent = '$'+totalValue.toLocaleString();
             document.getElementById('totalPL').textContent = (totalPL>=0?'+':'')+totalPL.toLocaleString();
