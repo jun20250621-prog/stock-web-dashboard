@@ -105,29 +105,21 @@ def api_portfolio():
 
 @app.route('/api/watchlist')
 def api_watchlist():
-    import logging
-    logger = logging.getLogger()
     try:
         watchlist = wm.get_all()
         stocks = []
         for item in watchlist:
             code = item.get('code')
+            # 使用與 portfolio 相同的價格取得邏輯
+            price_data = screener.get_daily_price(code, 5)
             current_price = 0
             change_pct = 0
-            try:
-                price_data = screener.get_daily_price(code, 5)
-                if price_data and len(price_data) > 0:
-                    latest = price_data[-1]
-                    current_price = latest.get('close', 0)
-                    # 計算漲跌幅
-                    if len(price_data) >= 2:
-                        prev_price = price_data[-2].get('close', current_price)
-                        if prev_price and prev_price > 0:
-                            change_pct = ((current_price - prev_price) / prev_price) * 100
-            except Exception as e:
-                logger.error(f"Error getting price for {code}: {e}")
-                current_price = 0
-                change_pct = 0
+            if price_data and len(price_data) > 0:
+                latest = price_data[-1]
+                current_price = latest.get('close', 0)
+                # 計算漲跌幅 - 使用與 portfolio 相同的方式
+                spread = latest.get('spread', 0) or 0
+                change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
             
             stocks.append({
                 'code': code,
@@ -141,8 +133,8 @@ def api_watchlist():
             })
         return jsonify(stocks)
     except Exception as e:
-        logger.error(f"Error in api_watchlist: {e}")
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 @app.route('/api/trades')
 def api_trades():
