@@ -69,6 +69,8 @@
                     <div class="card-header d-flex justify-content-between">
                         <span><i class="fas fa-eye me-2"></i>觀察名單</span>
                         <button class="btn btn-sm btn-success" onclick="showAddWatchlist()"><i class="fas fa-plus"></i>新增</button>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="exportWatchlist()"><i class="fas fa-download"></i>匯出</button>
+                        <label class="btn btn-sm btn-outline-secondary mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importWatchlist(this)"></label>
                     </div>
                     <div class="card-body"><table class="table table-hover" id="watchlistTable"><thead><tr><th>股票</th><th>現價</th><th>目標價</th><th>漲跌幅</th><th>追蹤原因</th><th>操作</th></tr></thead><tbody></tbody></table></div>
                 </div>
@@ -419,9 +421,45 @@
     async function deleteWatchlist(code){ if(confirm('確定刪除?')){ await fetch('/api/watchlist/delete/'+code,{method:'POST'}); loadWatchlist(); }}
     async function deleteTrade(id){ if(confirm('確定刪除?')){ await fetch('/api/trade/delete/'+id,{method:'POST'}); loadTrades(); loadAnalysis(); }}
 
-    async function exportPortfolio(){ const resp=await fetch('/api/portfolio'); const data=await resp.json(); alert('匯出功能'); }
-    async function exportTrades(){ const resp=await fetch('/api/trades'); const data=await resp.json(); alert('匯出功能'); }
-    async function importTrades(input){ alert('匯入功能'); }
+    async function exportPortfolio(){ 
+        const resp = await fetch('/api/export/portfolio'); 
+        const data = await resp.json();
+        if(data.data){
+            const a = document.createElement('a'); a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + data.data; a.download = data.filename || 'portfolio.xlsx'; a.click();
+        }else{ alert('匯出失敗'); }
+    }
+    async function exportTrades(){ 
+        const resp = await fetch('/api/export/trades'); 
+        const data = await resp.json();
+        if(data.data){
+            const a = document.createElement('a'); a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + data.data; a.download = data.filename || 'trades.xlsx'; a.click();
+        }else{ alert('匯出失敗'); }
+    }
+    async function exportWatchlist(){ 
+        const resp = await fetch('/api/export/watchlist'); 
+        const data = await resp.json();
+        if(data.data){
+            const a = document.createElement('a'); a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + data.data; a.download = data.filename || 'watchlist.xlsx'; a.click();
+        }else{ alert('匯出失敗'); }
+    }
+    async function importTrades(input){ 
+        const file = input.files[0]; if(!file) return;
+        const reader = new FileReader(); reader.onload = async () => {
+            const b64 = reader.result.split(',')[1];
+            const resp = await fetch('/api/import/trades', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({data:b64})});
+            const result = await resp.json();
+            if(result.success){ loadTrades(); loadAnalysis(); alert('匯入成功!'); }else{ alert('匯入失敗: '+result.error); }
+        }; reader.readAsDataURL(file);
+    }
+    async function importWatchlist(input){ 
+        const file = input.files[0]; if(!file) return;
+        const reader = new FileReader(); reader.onload = async () => {
+            const b64 = reader.result.split(',')[1];
+            const resp = await fetch('/api/import/watchlist', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({data:b64})});
+            const result = await resp.json();
+            if(result.success){ loadWatchlist(); alert('匯入成功!'); }else{ alert('匯入失敗: '+result.error); }
+        }; reader.readAsDataURL(file);
+    }
     async function generateSample(){ await fetch('/api/sample/generate',{method:'POST'}); loadTrades(); loadAnalysis(); alert('已產生5筆範例交易資料!'); }
 
     document.addEventListener('DOMContentLoaded', loadAll);

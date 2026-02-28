@@ -8,6 +8,9 @@ from flask_cors import CORS
 import sys
 import os
 import json
+import base64
+import io
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -323,6 +326,159 @@ def get_strategy(pl):
         return '⚠️ 留意'
     else:
         return '🛑 建議停損'
+
+# ==================== 匯出/匯入功能 ====================
+
+def create_excel(data, columns, filename):
+    """建立 Excel 檔案"""
+    try:
+        import pandas as pd
+        df = pd.DataFrame(data)
+        # 選擇需要的欄位
+        df = df[[c for c in columns if c in df.columns]]
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Sheet1')
+        output.seek(0)
+        b64_data = base64.b64encode(output.getvalue()).decode('utf-8')
+        return {'data': b64_data, 'filename': filename}
+    except Exception as e:
+        return {'error': str(e)}
+
+@app.route('/api/export/portfolio')
+def api_export_portfolio():
+    """匯出持股"""
+    portfolio = pm.get_all()
+    data = []
+    for code, stock in portfolio.items():
+        data.append({
+            '股票代碼': code,
+            '股票名稱': stock.get('name', ''),
+            '成本價': stock.get('cost', 0),
+            '股數': stock.get('shares', 0),
+            '停損價': stock.get('stop_loss', ''),
+            '停利價': stock.get('stop_profit', ''),
+            '產業': stock.get('industry', ''),
+            '應用': stock.get('application', ''),
+            '買入日期': stock.get('buy_date', '')
+        })
+    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '成本價', '股數', '停損價', '停利價', '產業', '應用', '買入日期'], f'持股_{datetime.now().strftime("%Y%m%d")}.xlsx'))
+
+@app.route('/api/export/trades')
+def api_export_trades():
+    """匯出交易紀錄"""
+    trades = tj.get_trades()
+    data = []
+    for t in trades:
+        data.append({
+            '股票代碼': t.get('code', ''),
+            '股票名稱': t.get('name', ''),
+            '買入日期': t.get('buy_date', ''),
+            '買入價格': t.get('buy_price', 0),
+            '賣出日期': t.get('sell_date', ''),
+            '賣出價格': t.get('sell_price', 0),
+            '股數': t.get('shares', 0),
+            '損益': t.get('profit_loss', 0),
+            '損益率': t.get('profit_loss_pct', 0),
+            '結果': t.get('result', ''),
+            '紀律': t.get('discipline', ''),
+            '策略': t.get('entry_strategy_id', '')
+        })
+    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '買入日期', '買入價格', '賣出日期', '賣出價格', '股數', '損益', '損益率', '結果', '紀律', '策略'], f'交易紀錄_{datetime.now().strftime("%Y%m%d")}.xlsx'))
+
+@app.route('/api/export/watchlist')
+def api_export_watchlist():
+    """匯出觀察名單"""
+    watchlist = wm.get_all()
+    data = []
+    for w in watchlist:
+        data.append({
+            '股票代碼': w.get('code', ''),
+            '股票名稱': w.get('name', ''),
+            '目標價': w.get('target_price', ''),
+            '追蹤原因': w.get('reason', ''),
+            '產業': w.get('industry', ''),
+            '新增日期': w.get('add_date', '')
+        })
+    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '目標價', '追蹤原因', '產業', '新增日期'], f'觀察名單_{datetime.now().strftime("%Y%m%d")}.xlsx'))
+
+@app.route('/api/import/trades', methods=['POST'])
+def api_import_trades():
+    """匯入交易紀錄"""
+    try:
+        import pandas as pd
+        data = request.json
+        b64_data = data.get('data', '')
+        if not b64_data:
+            return jsonify({'success': False, 'error': '無檔案資料'})
+        
+        # 解碼 Base64
+        excel_data = base64.b64decode(b64_data)
+        df = pd.read_excel(io.BytesIO(excel_data))
+        
+        # 匯入每一筆
+        count = 0
+        for _, row in df.iterrows():
+            try:
+                trade_data = {
+                    'code': str(row.get('股票代碼', '')),
+                    'name': str(row.get('股票名稱', '')),
+                    'buy_date': str(row.get('買入日期', '')),
+                    'buy_price': float(row.get('買入價格', 0)) if pd.notna(row.get('買入價格')) else None,
+                    'sell_date': str(row.get('賣出日期', '')) if pd.notna(row.get('賣出日期')) else None,
+                    'sell_price': float(row.get('賣出價格', 0)) if pd.notna(row.get('賣出價格')) else None,
+                    'shares': int(row.get('股數', 0)) if pd.notna(row.get('股數')) else None,
+                    'result': str(row.get('結果', '')),
+                    'discipline': str(row.get('紀律', '')),
+                    'entry_strategy_id': str(row.get('策略', ''))
+                }
+                if trade_data['code']:
+                    tj.add_trade(trade_data)
+                    count += 1
+            except:
+                pass
+        
+        reload_config()
+        return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/import/watchlist', methods=['POST'])
+def api_import_watchlist():
+    """匯入觀察名單"""
+    try:
+        import pandas as pd
+        data = request.json
+        b64_data = data.get('data', '')
+        if not b64_data:
+            return jsonify({'success': False, 'error': '無檔案資料'})
+        
+        # 解碼 Base64
+        excel_data = base64.b64decode(b64_data)
+        df = pd.read_excel(io.BytesIO(excel_data))
+        
+        # 匯入每一筆
+        count = 0
+        for _, row in df.iterrows():
+            try:
+                item = {
+                    'code': str(row.get('股票代碼', '')),
+                    'name': str(row.get('股票名稱', '')),
+                    'target_price': float(row.get('目標價', 0)) if pd.notna(row.get('目標價')) else None,
+                    'reason': str(row.get('追蹤原因', '')),
+                    'industry': str(row.get('產業', '')),
+                    'add_date': str(row.get('新增日期', '')) or datetime.now().strftime('%Y-%m-%d')
+                }
+                if item['code']:
+                    wm.add(item)
+                    count += 1
+            except:
+                pass
+        
+        reload_config()
+        return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 # ==================== Main ====================
 
