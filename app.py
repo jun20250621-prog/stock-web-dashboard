@@ -10,7 +10,11 @@ import os
 import json
 import base64
 import io
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# 台灣時區 (UTC+8)
+def now_taiwan():
+    return datetime.now(timezone(timedelta(hours=8)))
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -380,7 +384,7 @@ def api_export_portfolio():
             '應用': stock.get('application', ''),
             '買入日期': stock.get('buy_date', '')
         })
-    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '成本價', '股數', '停損價', '停利價', '產業', '應用', '買入日期'], f'持股_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'))
+    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '成本價', '股數', '停損價', '停利價', '產業', '應用', '買入日期'], f'持股_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.xlsx'))
 
 @app.route('/api/export/trades')
 def api_export_trades():
@@ -410,7 +414,7 @@ def api_export_trades():
             '紀律': t.get('discipline', ''),
             '策略': strategy_name
         })
-    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '買入日期', '買入價格', '賣出日期', '賣出價格', '股數', '損益', '損益率', '結果', '紀律', '策略'], f'交易紀錄_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'))
+    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '買入日期', '買入價格', '賣出日期', '賣出價格', '股數', '損益', '損益率', '結果', '紀律', '策略'], f'交易紀錄_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.xlsx'))
 
 @app.route('/api/export/watchlist')
 def api_export_watchlist():
@@ -426,7 +430,7 @@ def api_export_watchlist():
             '產業': w.get('industry', ''),
             '新增日期': w.get('add_date', '')
         })
-    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '目標價', '追蹤原因', '產業', '新增日期'], f'觀察名單_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'))
+    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '目標價', '追蹤原因', '產業', '新增日期'], f'觀察名單_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.xlsx'))
 
 @app.route('/api/import/trades', methods=['POST'])
 def api_import_trades():
@@ -537,7 +541,7 @@ def api_import_watchlist():
                     'target_price': float(get_val(row, col_map['target_price'])) if get_val(row, col_map['target_price']) else None,
                     'reason': str(get_val(row, col_map['reason']) or ''),
                     'industry': str(get_val(row, col_map['industry']) or ''),
-                    'add_date': str(get_val(row, col_map['add_date']) or datetime.now().strftime('%Y-%m-%d'))
+                    'add_date': str(get_val(row, col_map['add_date']) or now_taiwan().strftime('%Y-%m-%d'))
                 }
                 if item['code'] and item['code'] != 'nan':
                     wm.add(item)
