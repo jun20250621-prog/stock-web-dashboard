@@ -85,6 +85,7 @@ def api_portfolio():
             'code': code,
             'name': stock.get('name'),
             'cost': stock.get('cost'),
+            'shares': stock.get('shares'),
             'current_price': current_price,
             'change_pct': round(change_pct, 2),
             'profit_loss': round(pl.get('profit_loss', 0), 2),
@@ -92,6 +93,8 @@ def api_portfolio():
             'stop_loss': stock.get('stop_loss'),
             'stop_profit': stock.get('stop_profit'),
             'industry': stock.get('industry', ''),
+            'application': stock.get('application', ''),
+            'buy_date': stock.get('buy_date', ''),
             'strategy': get_strategy(pl)
         })
     return jsonify(stocks)
@@ -122,7 +125,8 @@ def api_watchlist():
                 'target_price': item.get('target_price'),
                 'change_pct': round(change_pct, 2),
                 'reason': item.get('reason', ''),
-                'industry': item.get('industry', '')
+                'industry': item.get('industry', ''),
+                'add_date': item.get('add_date', '')
             })
         return jsonify(stocks)
     except Exception as e:
