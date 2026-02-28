@@ -219,11 +219,17 @@ def api_schedule():
 
 @app.route('/api/portfolio/add', methods=['POST'])
 def api_portfolio_add():
-    data = request.json
-    code = data.get('code')
-    pm.add(code, data)
-    reload_config()
-    return jsonify({'success': True})
+    try:
+        data = request.json
+        code = data.get('code')
+        if not code:
+            return jsonify({'success': False, 'error': 'Missing code'}), 400
+        pm.add(code, data)
+        reload_config()
+        return jsonify({'success': True})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
 @app.route('/api/portfolio/update/<code>', methods=['POST'])
 def api_portfolio_update(code):
