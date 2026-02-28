@@ -11,7 +11,7 @@ import json
 import base64
 import io
 from datetime import datetime, timezone, timedelta
-from apscheduler.schedulers.background import BackgroundScheduler
+# 排程發送功能暫時停用
 import threading
 
 # 台灣時區 (UTC+8)
@@ -633,14 +633,7 @@ def check_schedule():
     except Exception as e:
         print(f"Schedule check error: {e}")
 
-# 啟動排程器
-try:
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(check_schedule, 'interval', minutes=1)
-    scheduler.start()
-    print("✅ 排程器已啟動")
-except Exception as e:
-    print(f"⚠️ 排程器啟動失敗: {e}")
+# 排程功能暫時停用
 
 # ==================== Main ====================
 
