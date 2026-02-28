@@ -246,10 +246,14 @@ def api_portfolio_delete(code):
 
 @app.route('/api/watchlist/add', methods=['POST'])
 def api_watchlist_add():
-    data = request.json
-    wm.add(data)
-    reload_config()
-    return jsonify({'success': True})
+    try:
+        data = request.json
+        wm.add(data)
+        reload_config()
+        return jsonify({'success': True})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
 @app.route('/api/watchlist/delete/<code>', methods=['POST'])
 def api_watchlist_delete(code):
