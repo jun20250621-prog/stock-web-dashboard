@@ -246,14 +246,18 @@ def api_strong_stocks():
                             'change_pct': round(change_pct, 2),
                             'momentum_5d': round(momentum_5d, 2)
                         })
+                else:
+                    # Debug: print which stock has no data
+                    print(f"No data for {stock['code']}")
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"Error: {stock['code']} - {e}")
         
         # 按動能排序
         results.sort(key=lambda x: x.get('momentum_5d', 0), reverse=True)
         return jsonify(results[:20])
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 # ==================== 排程設定 API ====================
 
