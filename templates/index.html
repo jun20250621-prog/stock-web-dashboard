@@ -278,9 +278,11 @@
             for(const[lvl,d]of Object.entries(disc)) html += `<div><b>${lvl}</b>: ${d.count}筆, 成功率${(d.success_rate||0).toFixed(1)}%</div>`;
             document.getElementById('disciplineStats').innerHTML = html;
             const strat = a.strategy_analysis||{};
+    const strategyNames = {'':'-', 'STG001':'KD黃金交叉', 'STG002':'KD死亡交叉', 'STG003':'MA多頭排列', 'STG004':'RSI超賣反彈', 'STG005':'MACD黃金交叉', 'STG006':'價量齊揚', 'STG007':'突破整理平台', 'STG008':'殖利率策略', 'STG009':'營收成長'};
             if(Object.keys(strat).length>0 && !strategyChart){
                 const ctx = document.getElementById('strategyChart').getContext('2d');
-                strategyChart = new Chart(ctx, {type:'bar', data:{labels:Object.keys(strat), datasets:[{label:'平均報酬%', data:Object.values(strat).map(d=>d.avg_profit_loss_pct||0), backgroundColor:Object.values(strat).map(d=>(d.avg_profit_loss_pct||0)>=0?'#4CAF50':'#F44336')}]}, options:{responsive:true}});
+                const labels = Object.keys(strat).map(id => strategyNames[id] || id);
+                strategyChart = new Chart(ctx, {type:'bar', data:{labels:labels, datasets:[{label:'平均報酬%', data:Object.values(strat).map(d=>d.avg_profit_loss_pct||0), backgroundColor:Object.values(strat).map(d=>(d.avg_profit_loss_pct||0)>=0?'#4CAF50':'#F44336')}]}, options:{responsive:true}});
             }
         }catch(e){ console.error(e); }
     }
