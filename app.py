@@ -196,58 +196,54 @@ def api_stock(code):
 
 @app.route('/api/strong_stocks')
 def api_strong_stocks():
-    # 熱門股票列表
-    popular_stocks = [
-        {'code': '2330', 'name': '台積電', 'industry': '半導體'},
-        {'code': '2454', 'name': '聯發科', 'industry': 'IC設計'},
-        {'code': '2317', 'name': '鴻海', 'industry': '電子'},
-        {'code': '2382', 'name': '廣達', 'industry': '電子'},
-        {'code': '3711', 'name': '日月光', 'industry': '半導體'},
-        {'code': '3034', 'name': '聯詠', 'industry': 'IC設計'},
-        {'code': '3017', 'name': '奇鋐', 'industry': '散熱'},
-        {'code': '3231', 'name': '緯創', 'industry': '電子'},
-        {'code': '4908', 'name': '前鼎', 'industry': '光電'},
-        {'code': '4977', 'name': '眾達-KY', 'industry': '光電'},
-        {'code': '1590', 'name': '亞德客-KY', 'industry': '氣動'},
-        {'code': '2630', 'name': '亞航', 'industry': '航太'},
-    ]
-    
-    results = []
-    for stock in popular_stocks:
-        try:
-            # 使用與 portfolio 相同的方式取得股價
-            price_data = screener.get_daily_price(stock['code'], 10)
-            if price_data and len(price_data) > 0:
-                current = price_data[-1].get('close', 0)
-                if len(price_data) >= 2:
-                    prev = price_data[-2].get('close', current)
-                    change_pct = ((current - prev) / prev * 100) if prev > 0 else 0
-                else:
-                    change_pct = 0
+    try:
+        global screener
+        if screener is None:
+            from data.fetcher import TaiwanStockScreener
+            screener = TaiwanStockScreener(config)
+        
+        popular_stocks = [
+            {'code': '2330', 'name': '台積電', 'industry': '半導體'},
+            {'code': '2454', 'name': '聯發科', 'industry': 'IC設計'},
+            {'code': '2317', 'name': '鴻海', 'industry': '電子'},
+            {'code': '2382', 'name': '廣達', 'industry': '電子'},
+            {'code': '3711', 'name': '日月光', 'industry': '半導體'},
+            {'code': '3017', 'name': '奇鋐', 'industry': '散熱'},
+            {'code': '3231', 'name': '緯創', 'industry': '電子'},
+            {'code': '4908', 'name': '前鼎', 'industry': '光電'},
+            {'code': '4977', 'name': '眾達-KY', 'industry': '光電'},
+            {'code': '1590', 'name': '亞德客-KY', 'industry': '氣動'},
+        ]
+        
+        results = []
+        for stock in popular_stocks:
+            try:
+                price_data = screener.get_daily_price(stock['code'], 30)
                 
-                # 計算5日動能
-                momentum_5d = 0
-                if len(price_data) >= 6:
-                    p_start = price_data[-6].get('close', 0)
-                    p_end = price_data[-1].get('close', 0)
-                    if p_start > 0:
-                        momentum_5d = ((p_end - p_start) / p_start) * 100
-                
-                if current > 0:
-                    results.append({
-                        'code': stock['code'],
-                        'name': stock['name'],
-                        'industry': stock['industry'],
-                        'price': current,
-                        'change_pct': round(change_pct, 2),
-                        'momentum_5d': round(momentum_5d, 2)
-                    })
-        except Exception as e:
-            print(f"Error {stock['code']}: {e}")
-    
-    # 按動能排序
-    results.sort(key=lambda x: x.get('momentum_5d', 0), reverse=True)
-    return jsonify(results[:20])
+                if price_data and isinstance(price_data, list) and len(price_data) >= 6:
+                    latest = price_data[-1]
+                    prev5 = price_data[-6]
+                    
+                    current = float(latest.get('close', 0) or latest.get('Close', 0) or 0)
+                    prev5_price = float(prev5.get('close', 0) or prev5.get('Close', 0) or 0)
+                    
+                    if current > 0 and prev5_price > 0:
+                        change_pct = ((current - prev5_price) / prev5_price) * 100
+                        results.append({
+                            'code': stock['code'],
+                            'name': stock['name'],
+                            'industry': stock['industry'],
+                            'price': current,
+                            'change_pct': round(change_pct, 2),
+                            'momentum_5d': round(change_pct, 2)
+                        })
+            except Exception as e:
+                print(f"Error {stock['code']}: {e}")
+        
+        results.sort(key=lambda x: x.get('momentum_5d', 0), reverse=True)
+        return jsonify(results[:20])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ==================== 排程設定 API ====================
 
