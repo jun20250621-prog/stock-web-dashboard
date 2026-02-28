@@ -16,7 +16,7 @@ CORS(app)
 
 # 全域變數
 config = {}
-fm = None  # PortfolioManager
+pm = None  # PortfolioManager
 wm = None  # WatchlistManager
 tj = None  # TradeJournal
 
@@ -35,10 +35,10 @@ def load_config():
 
 # 重新載入設定（用於更新後）
 def reload_config():
-    global config, fm, wm, tj
+    global config, pm, wm, tj
     load_config()
-    # 重新初始化管理器
-    fm = PortfolioManager(config)
+    # 重新初始化管理器（更新全域變數）
+    pm = PortfolioManager(config)
     wm = WatchlistManager(config)
     tj = TradeJournal(config)
 
