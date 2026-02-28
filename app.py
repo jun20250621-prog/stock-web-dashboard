@@ -207,55 +207,49 @@ def api_strong_stocks():
             {'code': '3034', 'name': '聯詠', 'industry': 'IC設計'},
             {'code': '3017', 'name': '奇鋐', 'industry': '散熱'},
             {'code': '3231', 'name': '緯創', 'industry': '電子'},
-            {'code': '2356', 'name': '英業達', 'industry': '電子'},
-            {'code': '2353', 'name': '宏碁', 'industry': '電子'},
-            {'code': '6282', 'name': '康舒', 'industry': '電源'},
-            {'code': '4909', 'name': '新復興', 'industry': '通訊'},
             {'code': '4908', 'name': '前鼎', 'industry': '光電'},
             {'code': '4977', 'name': '眾達-KY', 'industry': '光電'},
             {'code': '1590', 'name': '亞德客-KY', 'industry': '氣動'},
             {'code': '2630', 'name': '亞航', 'industry': '航太'},
-            {'code': '8112', 'name': '至上', 'industry': '半導體'},
-            {'code': '2374', 'name': '佳能', 'industry': '光電'}
         ]
         
         results = []
         for stock in popular_stocks:
             try:
-                data = screener.get_daily_price(stock['code'], 10)
+                # 嘗試取得股價
+                if screener:
+                    data = screener.get_daily_price(stock['code'], 10)
+                    prices = data if isinstance(data, list) else (data.get('prices', []) if isinstance(data, dict) else [])
+                else:
+                    prices = []
                 
-                if data and 'prices' in data:
-                    prices = data.get('prices', [])
-                    if len(prices) >= 2:
-                        current = float(prices[-1])
-                        prev = float(prices[-2])
-                        change_pct = ((current - prev) / prev * 100) if prev > 0 else 0
-                        
-                        # 計算5日動能
-                        momentum_5d = 0
-                        if len(prices) >= 6:
-                            p_start = float(prices[-6])
-                            p_end = float(prices[-1])
-                            if p_start > 0:
-                                momentum_5d = ((p_end - p_start) / p_start) * 100
-                        
-                        results.append({
-                            'code': stock['code'],
-                            'name': stock['name'],
-                            'industry': stock['industry'],
-                            'price': current,
-                            'change_pct': round(change_pct, 2),
-                            'momentum_5d': round(momentum_5d, 2)
-                        })
+                if prices and len(prices) >= 2:
+                    current = float(prices[-1]) if not isinstance(prices[-1], (int, float)) else prices[-1]
+                    prev = float(prices[-2]) if not isinstance(prices[-2], (int, float)) else prices[-2]
+                    change_pct = ((current - prev) / prev * 100) if prev > 0 else 0
+                    
+                    momentum_5d = 0
+                    if len(prices) >= 6:
+                        p_start = float(prices[-6]) if not isinstance(prices[-6], (int, float)) else prices[-6]
+                        p_end = float(prices[-1]) if not isinstance(prices[-1], (int, float)) else prices[-1]
+                        if p_start > 0:
+                            momentum_5d = ((p_end - p_start) / p_start) * 100
+                    
+                    results.append({
+                        'code': stock['code'],
+                        'name': stock['name'],
+                        'industry': stock['industry'],
+                        'price': current,
+                        'change_pct': round(change_pct, 2),
+                        'momentum_5d': round(momentum_5d, 2)
+                    })
             except Exception as e:
-                print(f"Error: {stock['code']} - {e}")
+                print(f"Error {stock['code']}: {e}")
         
-        # 按動能排序
         results.sort(key=lambda x: x.get('momentum_5d', 0), reverse=True)
         return jsonify(results[:20])
     except Exception as e:
-        import traceback
-        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
+        return jsonify({'error': str(e)}), 500
 
 # ==================== 排程設定 API ====================
 
