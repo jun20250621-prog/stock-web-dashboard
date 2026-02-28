@@ -316,16 +316,24 @@ class TaiwanStockScreener:
         
         return None
     
-    def screen_strong_stocks(self, min_volume: int = 1000, min_price: float = 10, limit: int = 20) -> List[Dict]:
+    def screen_strong_stocks(self, min_volume: int = 1000, min_price: float = 10, limit: int = 20, target_date: str = None) -> List[Dict]:
         """篩選強勢股"""
         stocks = self.get_all_stocks()
         
         if not stocks:
             return []
         
-        # 取得今日日期
-        end_date = datetime.now().strftime("%Y-%m-%d")
-        start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        # 使用指定日期或今日
+        if target_date:
+            try:
+                end_date = datetime.strptime(target_date, "%Y-%m-%d").strftime("%Y-%m-%d")
+                start_date = (datetime.strptime(target_date, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
+            except:
+                end_date = datetime.now().strftime("%Y-%m-%d")
+                start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        else:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+            start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
         
         strong_stocks = []
         

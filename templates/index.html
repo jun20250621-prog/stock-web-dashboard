@@ -97,9 +97,12 @@
             </div>
             <div class="tab-pane fade" id="strong">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-fire me-2"></i>強勢股篩選</span>
-                        <button class="btn btn-sm btn-danger" onclick="loadStrongStocks()"><i class="fas fa-search"></i>開始篩選</button>
+                        <div>
+                            <input type="date" class="form-control form-control-sm" id="strongDate" style="width:140px;display:inline-block;" value="">
+                            <button class="btn btn-sm btn-danger" onclick="loadStrongStocks()"><i class="fas fa-search"></i>篩選</button>
+                        </div>
                     </div>
                     <div class="card-body"><table class="table table-hover" id="strongStocksTable"><thead><tr><th>排名</th><th>股票</th><th>產業</th><th>現價</th><th>5日動能</th><th>漲跌幅</th></tr></thead><tbody></tbody></table></div>
                 </div>
@@ -290,9 +293,11 @@
     async function loadStrongStocks(){
         document.querySelector('#strongStocksTable tbody').innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> 載入中...</td></tr>';
         try{
+            const targetDate = document.getElementById('strongDate').value;
+            const url = targetDate ? `/api/strong_stocks?date=${targetDate}` : '/api/strong_stocks';
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-            const resp = await fetch('/api/strong_stocks', {signal: controller.signal});
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
+            const resp = await fetch(url, {signal: controller.signal});
             clearTimeout(timeoutId);
             const stocks = await resp.json();
             let html = ''; stocks.forEach((s,i) => {
