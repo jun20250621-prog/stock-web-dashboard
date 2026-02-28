@@ -384,6 +384,64 @@ def api_export_portfolio():
         })
     return jsonify(create_excel(data, ['股票代碼', '股票名稱', '成本價', '股數', '停損價', '停利價', '產業', '應用', '買入日期'], f'持股_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.xlsx'))
 
+@app.route('/api/import/portfolio', methods=['POST'])
+def api_import_portfolio():
+    """匯入持股"""
+    try:
+        import pandas as pd
+        data = request.json
+        b64_data = data.get('data', '')
+        if not b64_data:
+            return jsonify({'success': False, 'error': '無檔案資料'})
+        
+        excel_data = base64.b64decode(b64_data)
+        df = pd.read_excel(io.BytesIO(excel_data))
+        
+        col_map = {
+            'code': ['股票代碼', 'code', 'Code', '代碼'],
+            'name': ['股票名稱', 'name', 'Name', '名稱'],
+            'cost': ['成本價', 'cost', 'Cost'],
+            'shares': ['股數', 'shares', 'Shares', '數量'],
+            'stop_loss': ['停損價', 'stop_loss', 'Stop Loss'],
+            'stop_profit': ['停利價', 'stop_profit', 'Stop Profit'],
+            'industry': ['產業', 'industry', 'Industry'],
+            'application': ['應用', 'application', 'Application'],
+            'buy_date': ['買入日期', 'buy_date', 'Buy Date', '買日']
+        }
+        
+        def get_val(row, keys):
+            for k in keys:
+                if k in row.index:
+                    val = row[k]
+                    if pd.notna(val):
+                        return val
+            return None
+        
+        count = 0
+        for idx, row in df.iterrows():
+            try:
+                item = {
+                    'code': str(get_val(row, col_map['code']) or ''),
+                    'name': str(get_val(row, col_map['name']) or ''),
+                    'cost': float(get_val(row, col_map['cost'])) if get_val(row, col_map['cost']) else 0,
+                    'shares': int(get_val(row, col_map['shares'])) if get_val(row, col_map['shares']) else 1000,
+                    'stop_loss': float(get_val(row, col_map['stop_loss'])) if get_val(row, col_map['stop_loss']) else None,
+                    'stop_profit': float(get_val(row, col_map['stop_profit'])) if get_val(row, col_map['stop_profit']) else None,
+                    'industry': str(get_val(row, col_map['industry']) or ''),
+                    'application': str(get_val(row, col_map['application']) or ''),
+                    'buy_date': str(get_val(row, col_map['buy_date']) or '')
+                }
+                if item['code'] and item['code'] != 'nan':
+                    pm.add(item['code'], item)
+                    count += 1
+            except Exception as e:
+                print(f"Row {idx} error: {e}")
+        
+        reload_config()
+        return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/api/export/trades')
 def api_export_trades():
     """匯出交易紀錄"""
