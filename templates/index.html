@@ -23,6 +23,24 @@
         .summary-card .label { color: #666; font-size: 0.85em; }
         .stock-code { font-weight: bold; color: var(--primary); }
         .chart-container { position: relative; height: 350px; margin: 15px 0; }
+        /* 手機優化 */
+        @media (max-width: 768px) {
+            .container-fluid { padding: 5px; }
+            .card { margin-bottom: 10px; border-radius: 8px; }
+            .card-header { padding: 10px; font-size: 14px; }
+            .card-body { padding: 10px; }
+            .table { font-size: 11px; }
+            .table th, .table td { padding: 4px 2px; }
+            .btn { padding: 3px 8px; font-size: 11px; }
+            .navbar { padding: 5px 10px; }
+            .nav-link { padding: 5px 10px; font-size: 12px; }
+            .modal-body { padding: 10px; }
+            .form-control, .form-select { padding: 6px; font-size: 12px; }
+            /* 隱藏較少使用的欄位 */
+            #portfolioTable th:nth-child(n+9), #portfolioTable td:nth-child(n+9),
+            #watchlistTable th:nth-child(n+7), #watchlistTable td:nth-child(n+7),
+            #tradesTable th:nth-child(n+11), #tradesTable td:nth-child(n+11) { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -59,7 +77,7 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between">
                         <span><i class="fas fa-wallet me-2"></i>持股名單</span>
-                        <div><button class="btn btn-sm btn-success me-1" onclick="showAddPortfolio()"><i class="fas fa-plus"></i>新增</button><button class="btn btn-sm btn-outline-primary me-1" onclick="exportPortfolio()"><i class="fas fa-download"></i>匯出</button><label class="btn btn-sm btn-outline-secondary mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importPortfolio(this)"></label></div>
+                        <div><button class="btn btn-sm btn-success me-1" onclick="showAddPortfolio()"><i class="fas fa-plus"></i>新增</button><button class="btn btn-sm btn-outline-primary me-1" onclick="exportPortfolio()"><i class="fas fa-download"></i>匯出</button><label class="btn btn-sm btn-outline-secondary me-1 mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importPortfolio(this)"></label><button class="btn btn-sm btn-outline-warning" onclick="downloadBackup()"><i class="fas fa-save"></i>備份</button></div>
                     </div>
                     <div class="card-body"><table class="table table-hover" id="portfolioTable"><thead><tr><th>股票</th><th>股數</th><th>成本</th><th>現價</th><th>漲跌幅</th><th>損益</th><th>損益率</th><th>停損</th><th>停利</th><th>產業</th><th>應用</th><th>買入日</th><th>操作</th></tr></thead><tbody></tbody></table></div>
                 </div>
@@ -513,6 +531,14 @@
         if(data.data){
             const a = document.createElement('a'); a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + data.data; a.download = data.filename || 'portfolio.xlsx'; a.click();
         }else{ alert('匯出失敗'); }
+    }
+    async function downloadBackup(){
+        const resp = await fetch('/api/backup');
+        const data = await resp.json();
+        if(data.success && data.data){
+            const a = document.createElement('a'); a.href = 'data:application/octet-stream;base64,' + data.data; a.download = data.filename || 'backup.db'; a.click();
+            alert('備份下載成功！');
+        }else{ alert('備份失敗: ' + (data.error || '未知錯誤')); }
     }
     async function exportTrades(){ 
         const resp = await fetch('/api/export/trades'); 

@@ -612,6 +612,156 @@ def api_import_watchlist():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+from datetime import datetime, timezone, timedelta
+
+# 台灣時區 (UTC+8)
+def now_taiwan():
+    return datetime.now(timezone(timedelta(hours=8)))
+
+# ==================== 排程發送 Telegram ====================
+
+TELEGRAM_TOKEN = '8294937993:AAFOY_rwU33p6ndhFrnDyjKFrSQ-_1KavOE'
+TELEGRAM_CHAT_ID = '8137433836'
+
+def send_telegram(message):
+    """發送 Telegram 訊息"""
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        data = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"}
+        resp = requests.post(url, data=data, timeout=10)
+        return resp.status_code == 200
+    except Exception as e:
+        print(f"Telegram error: {e}")
+        return False
+
+def generate_report_message():
+    """產生報告訊息"""
+    try:
+        portfolio = pm.get_all()
+        msg = "📊 <b>持股報告</b>\n\n"
+        
+        for code, stock in list(portfolio.items())[:10]:
+            try:
+                price_data = screener.get_daily_price(code, 1)
+                if price_data:
+                    current_price = price_data[-1].get('close', 0)
+                    cost = stock.get('cost', 0)
+                    shares = stock.get('shares', 1000)
+                    if cost > 0:
+                        pl = (current_price - cost) * shares
+                        pl_pct = ((current_price - cost) / cost) * 100
+                        emoji = "🟢" if pl >= 0 else "🔴"
+                        msg += f"{emoji} {code} {stock.get('name','')}: {current_price} ({pl_pct:+.1f}%)\n"
+            except:
+                pass
+        
+        if len(portfolio) > 10:
+            msg += f"\n...還有 {len(portfolio)-10} 筆"
+        
+        return msg
+    except Exception as e:
+        return f"Error: {e}"
+
+def check_schedule():
+    """檢查排程並發送"""
+    try:
+        schedule = config.get('schedule', {})
+        now = now_taiwan()
+        current_time = now.strftime("%H:%M")
+        current_date = now.strftime("%Y-%m-%d")
+        
+        # 早盤
+        if current_time == schedule.get('morning', '08:30'):
+            send_telegram(f"🌅 <b>早盤提醒</b>\n\n今日日期: {current_date}\n\n記得追蹤大盤走勢！")
+        
+        # 監控時間
+        monitor_times = schedule.get('monitor', '').split(',')
+        if current_time in [t.strip() for t in monitor_times]:
+            send_telegram(generate_report_message())
+        
+        # 晚盤
+        if current_time == schedule.get('evening', '15:00'):
+            msg = f"🌙 <b>盤後報告</b> - {current_date}\n\n" + generate_report_message()
+            send_telegram(msg)
+    except Exception as e:
+        print(f"Schedule check error: {e}")
+
+# 嘗試啟動排程器
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(check_schedule, 'interval', minutes=1)
+    scheduler.start()
+    print("✅ 排程器已啟動")
+except Exception as e:
+    print(f"⚠️ 排程器無法啟動: {e}")
+
+# ==================== 股價快取 ====================
+price_cache = {}
+price_cache_time = {}
+
+def get_cached_price(code):
+    """取得快取股價"""
+    import time
+    now = time.time()
+    # 5分鐘內不重複取得
+    if code in price_cache and (now - price_cache_time.get(code, 0)) < 300:
+        return price_cache[code]
+    return None
+
+def set_cached_price(code, price_data):
+    """設定股價快取"""
+    import time
+    price_cache[code] = price_data
+    price_cache_time[code] = time.time()
+
+# ==================== 備份功能 ====================
+
+@app.route('/api/backup')
+def api_backup():
+    """匯出完整資料庫備份"""
+    try:
+        db_path = config.get('database', {}).get('path', 'data/stock_data.db')
+        if not os.path.isabs(db_path):
+            db_path = os.path.join(os.path.dirname(__file__), db_path)
+        
+        if os.path.exists(db_path):
+            with open(db_path, 'rb') as f:
+                db_data = base64.b64encode(f.read()).decode('utf-8')
+            return jsonify({
+                'success': True,
+                'data': db_data,
+                'filename': f'backup_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.db',
+                'tables': ['portfolio', 'watchlist', 'trades']
+            })
+        return jsonify({'success': False, 'error': 'Database not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/backup/restore', methods=['POST'])
+def api_backup_restore():
+    """從備份還原"""
+    try:
+        data = request.json
+        db_data = data.get('data', '')
+        if not db_data:
+            return jsonify({'success': False, 'error': 'No data'})
+        
+        db_path = config.get('database', {}).get('path', 'data/stock_data.db')
+        if not os.path.isabs(db_path):
+            db_path = os.path.join(os.path.dirname(__file__), db_path)
+        
+        # 寫入資料庫
+        with open(db_path, 'wb') as f:
+            f.write(base64.b64decode(db_data))
+        
+        # 重新載入
+        reload_config()
+        
+        return jsonify({'success': True, 'message': 'Restore successful'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 # ==================== Main ====================
 
 if __name__ == '__main__':
