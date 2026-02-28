@@ -321,7 +321,21 @@ class TaiwanStockScreener:
         stocks = self.get_all_stocks()
         
         if not stocks:
-            return []
+            # 如果沒有股票資料，使用熱門股票列表
+        stock_names = {
+            '2330': '台積電', '2454': '聯發科', '2317': '鴻海', '2382': '廣達', '3711': '日月光',
+            '3034': '聯詠', '3017': '奇鋐', '3231': '緯創', '2356': '英業達', '2353': '宏碁',
+            '6282': '康舒', '4909': '新復興', '4908': '前鼎', '4977': '眾達-KY', '1590': '亞德客-KY',
+            '2630': '亞航', '8112': '至上', '2374': '佳能'
+        }
+        stock_industries = {
+            '2330': '半導體', '2454': 'IC設計', '2317': '電子', '2382': '電子', '3711': '半導體',
+            '3034': 'IC設計', '3017': '散熱', '3231': '電子', '2356': '電子', '2353': '電子',
+            '6282': '電源', '4909': '通訊', '4908': '光電', '4977': '光電', '1590': '氣動',
+            '2630': '航太', '8112': '半導體', '2374': '光電'
+        }
+        stocks = [{'stock_id': code, 'stock_name': stock_names.get(code, ''), 'industry_category': stock_industries.get(code, '')} 
+                  for code in ['2330','2454','2317','2382','3711','3034','3017','3231','2356','2353','6282','4909','4908','4977','1590','2630','8112','2374']]
         
         # 使用指定日期或今日
         if target_date:
@@ -337,7 +351,7 @@ class TaiwanStockScreener:
         
         strong_stocks = []
         
-        # 測試前 30 檔
+        # 測試所有熱門股票
         for i, stock in enumerate(stocks[:30]):
             stock_id = stock.get('stock_id')
             stock_name = stock.get('stock_name', '')
@@ -348,22 +362,31 @@ class TaiwanStockScreener:
                 latest = price_data[-1]
                 
                 # 基本篩選
-                if latest['close'] > min_price and latest.get('Trading_Volume', 0) > min_volume * 1000:
+                current_price = latest.get('close', 0)
+                volume = latest.get('Trading_Volume', 0)
+                
+                if current_price > min_price and volume > min_volume * 1000:
                     # 計算動量
                     if len(price_data) >= 5:
                         returns = [(price_data[j]['close'] - price_data[j-1]['close']) / price_data[j-1]['close'] 
-                                   for j in range(1, min(6, len(price_data)))]
-                        momentum_5d = sum(returns) / len(returns)
+                                   for j in range(1, min(6, len(price_data))) if price_data[j-1].get('close',0) > 0]
+                        momentum_5d = sum(returns) / len(returns) if returns else 0
                         
-                        change_pct = (latest.get('spread', 0) or 0) / (latest['close'] - (latest.get('spread', 0) or 0)) * 100
+                        # 計算漲跌幅
+                        if len(price_data) >= 2:
+                            prev_price = price_data[-2].get('close', current_price)
+                            change_pct = ((current_price - prev_price) / prev_price * 100) if prev_price > 0 else 0
+                        else:
+                            change_pct = 0
                         
-                        if momentum_5d > 0.02:  # 5日正報酬 > 2%
+                        # 只要有正動量就加入
+                        if momentum_5d > 0:
                             strong_stocks.append({
                                 'code': stock_id,
                                 'name': stock_name,
                                 'industry': stock.get('industry_category', ''),
-                                'price': latest['close'],
-                                'volume': latest.get('Trading_Volume', 0),
+                                'price': current_price,
+                                'volume': volume,
                                 'momentum_5d': momentum_5d * 100,
                                 'change_pct': change_pct
                             })
@@ -375,4 +398,6 @@ class TaiwanStockScreener:
         # 按動量排序
         strong_stocks.sort(key=lambda x: x['momentum_5d'], reverse=True)
         
-        return strong_stocks[:20]
+        # 按動量排序
+        strong_stocks.sort(key=lambda x: x.get('momentum_5d', 0), reverse=True)
+        return strong_stocks[:limit]
