@@ -198,12 +198,16 @@ def api_stock(code):
 
 @app.route('/api/strong_stocks')
 def api_strong_stocks():
-    min_volume = request.args.get('min_volume', default=1000, type=int)
-    min_price = request.args.get('min_price', default=10, type=float)
-    target_date = request.args.get('date', default=None, type=str)
-    limit = request.args.get('limit', default=20, type=int)
-    stocks = screener.screen_strong_stocks(min_volume, min_price, limit, target_date)
-    return jsonify(stocks[:limit] if len(stocks) > limit else stocks)
+    try:
+        min_volume = request.args.get('min_volume', default=1000, type=int)
+        min_price = request.args.get('min_price', default=10, type=float)
+        target_date = request.args.get('date', default=None, type=str)
+        limit = request.args.get('limit', default=20, type=int)
+        stocks = screener.screen_strong_stocks(min_volume, min_price, limit, target_date)
+        return jsonify(stocks[:limit] if len(stocks) > limit else stocks)
+    except Exception as e:
+        import traceback
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 # ==================== 排程設定 API ====================
 
