@@ -198,19 +198,8 @@ def api_stock(code):
 
 @app.route('/api/strong_stocks')
 def api_strong_stocks():
-    try:
-        # 先測試熱門股票
-        test_stocks = [
-            {'code': '2330', 'name': '台積電', 'industry': '半導體', 'price': 1995, 'momentum_5d': 2.5, 'change_pct': 1.2},
-            {'code': '2454', 'name': '聯發科', 'industry': 'IC設計', 'price': 1450, 'momentum_5d': 1.8, 'change_pct': 0.8},
-            {'code': '3017', 'name': '奇鋐', 'industry': '散熱', 'price': 1765, 'momentum_5d': 5.2, 'change_pct': 3.5},
-            {'code': '4908', 'name': '前鼎', 'industry': '光電', 'price': 87.1, 'momentum_5d': 3.1, 'change_pct': 1.6},
-            {'code': '4977', 'name': '眾達-KY', 'industry': '光電', 'price': 173.0, 'momentum_5d': 4.2, 'change_pct': 9.8}
-        ]
-        return jsonify(test_stocks)
-    except Exception as e:
-        import traceback
-        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
+    # 強勢股篩選功能 - 暫時停用
+    return jsonify([])
 
 # ==================== 排程設定 API ====================
 
@@ -645,9 +634,13 @@ def check_schedule():
         print(f"Schedule check error: {e}")
 
 # 啟動排程器
-scheduler = BackgroundScheduler()
-scheduler.add_job(check_schedule, 'interval', minutes=1)
-scheduler.start()
+try:
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(check_schedule, 'interval', minutes=1)
+    scheduler.start()
+    print("✅ 排程器已啟動")
+except Exception as e:
+    print(f"⚠️ 排程器啟動失敗: {e}")
 
 # ==================== Main ====================
 
