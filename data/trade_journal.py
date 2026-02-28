@@ -192,6 +192,45 @@ class TradeJournal:
         
         return trade_id
     
+    def update_trade(self, trade_id: str, trade_data: Dict) -> None:
+        """更新交易紀錄"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # 計算損益
+        if trade_data.get('sell_price') and trade_data.get('shares'):
+            total_revenue = trade_data['sell_price'] * trade_data['shares']
+            trade_data['total_revenue'] = total_revenue
+            if trade_data.get('total_cost'):
+                pl = total_revenue - trade_data['total_cost']
+                pl_pct = (pl / trade_data['total_cost']) * 100
+                trade_data['profit_loss'] = pl
+                trade_data['profit_loss_pct'] = pl_pct
+        
+        # 更新資料
+        set_clauses = []
+        params = []
+        for key in ['code', 'name', 'type', 'buy_date', 'buy_price', 'sell_date', 'sell_price', 'shares', 'total_cost', 'total_revenue', 'profit_loss', 'profit_loss_pct', 'holding_days', 'entry_strategy_id', 'entry_reason', 'exit_strategy_id', 'exit_reason', 'result', 'success_reason', 'failure_reason', 'improvement', 'discipline', 'discipline_score', 'tags', 'notes']:
+            if key in trade_data:
+                set_clauses.append(f"{key} = ?")
+                params.append(trade_data[key])
+        
+        if set_clauses:
+            params.append(trade_id)
+            query = f"UPDATE trades SET {', '.join(set_clauses)}, updated_at = datetime('now') WHERE id = ?"
+            cursor.execute(query, params)
+            conn.commit()
+        
+        conn.close()
+    
+    def delete_trade(self, trade_id: str) -> None:
+        """刪除交易紀錄"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM trades WHERE id = ?", (trade_id,))
+        conn.commit()
+        conn.close()
+    
     def get_trades(self, filters: Dict = None) -> List[Dict]:
         """取得交易紀錄"""
         conn = sqlite3.connect(self.db_path)

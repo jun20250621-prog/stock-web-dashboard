@@ -43,6 +43,15 @@ class WatchlistManager:
         watchlist = [item for item in watchlist if item.get('code') != code]
         self._save(watchlist)
     
+    def update(self, code: str, data: Dict) -> None:
+        """更新觀察名單"""
+        watchlist = self.get_all()
+        for i, item in enumerate(watchlist):
+            if item.get('code') == code:
+                watchlist[i].update(data)
+                break
+        self._save(watchlist)
+    
     def import_data(self, watchlist: List[Dict]) -> None:
         """匯入觀察名單"""
         self._save(watchlist)
