@@ -1,65 +1,155 @@
 #!/usr/bin/env python3
 """
-持股管理模組
-Portfolio Manager
+持股管理模組 - 使用 SQLite
+Portfolio Manager with SQLite
 """
 
-import json
+import sqlite3
 import os
 from typing import Dict, List, Optional
 from datetime import datetime
-
 
 class PortfolioManager:
     """持股管理器"""
     
     def __init__(self, config: Dict):
         self.config = config
-        self.portfolio_file = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), 
-            'stock_cli',
-            'config.json'
-        )
+        # 使用與 trade_journal 相同的資料庫
+        self.db_path = config.get('database', {}).get('path', 'data/stock_data.db')
+        # 確保路徑正確
+        if not os.path.isabs(self.db_path):
+            self.db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), self.db_path)
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self._init_db()
+    
+    def _init_db(self):
+        """初始化資料庫"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS portfolio (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT NOT NULL UNIQUE,
+                name TEXT,
+                cost REAL,
+                shares INTEGER,
+                stop_loss REAL,
+                stop_profit REAL,
+                industry TEXT,
+                application TEXT,
+                buy_date TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.commit()
+        conn.close()
     
     def get_all(self) -> Dict:
         """取得所有持股"""
-        return self.config.get('portfolio', {})
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM portfolio")
+        rows = cursor.fetchall()
+        conn.close()
+        
+        portfolio = {}
+        for row in rows:
+            portfolio[row['code']] = {
+                'id': row['id'],
+                'code': row['code'],
+                'name': row['name'],
+                'cost': row['cost'],
+                'shares': row['shares'],
+                'stop_loss': row['stop_loss'],
+                'stop_profit': row['stop_profit'],
+                'industry': row['industry'],
+                'application': row['application'],
+                'buy_date': row['buy_date']
+            }
+        return portfolio
     
     def get(self, code: str) -> Optional[Dict]:
         """取得單一持股"""
-        portfolio = self.get_all()
-        return portfolio.get(code)
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM portfolio WHERE code = ?", (code,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            return {
+                'id': row['id'],
+                'code': row['code'],
+                'name': row['name'],
+                'cost': row['cost'],
+                'shares': row['shares'],
+                'stop_loss': row['stop_loss'],
+                'stop_profit': row['stop_profit'],
+                'industry': row['industry'],
+                'application': row['application'],
+                'buy_date': row['buy_date']
+            }
+        return None
     
     def add(self, code: str, data: Dict) -> None:
         """新增持股"""
-        portfolio = self.get_all()
-        portfolio[code] = data
-        self._save(portfolio)
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT OR REPLACE INTO portfolio (code, name, cost, shares, stop_loss, stop_profit, industry, application, buy_date, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ''', (
+            code,
+            data.get('name', ''),
+            data.get('cost', 0),
+            data.get('shares', 1000),
+            data.get('stop_loss'),
+            data.get('stop_profit'),
+            data.get('industry', ''),
+            data.get('application', ''),
+            data.get('buy_date', '')
+        ))
+        conn.commit()
+        conn.close()
     
     def update(self, code: str, data: Dict) -> None:
         """更新持股"""
-        portfolio = self.get_all()
-        if code in portfolio:
-            portfolio[code].update(data)
-            self._save(portfolio)
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE portfolio SET 
+                name = ?, cost = ?, shares = ?, stop_loss = ?, stop_profit = ?,
+                industry = ?, application = ?, buy_date = ?, updated_at = datetime('now')
+            WHERE code = ?
+        ''', (
+            data.get('name', ''),
+            data.get('cost', 0),
+            data.get('shares', 1000),
+            data.get('stop_loss'),
+            data.get('stop_profit'),
+            data.get('industry', ''),
+            data.get('application', ''),
+            data.get('buy_date', ''),
+            code
+        ))
+        conn.commit()
+        conn.close()
     
     def remove(self, code: str) -> None:
         """移除持股"""
-        portfolio = self.get_all()
-        if code in portfolio:
-            del portfolio[code]
-            self._save(portfolio)
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM portfolio WHERE code = ?", (code,))
+        conn.commit()
+        conn.close()
     
     def import_data(self, portfolio: Dict) -> None:
         """匯入持股資料"""
-        self._save(portfolio)
-    
-    def _save(self, portfolio: Dict) -> None:
-        """儲存至設定檔"""
-        self.config['portfolio'] = portfolio
-        
-        with open(self.portfolio_file, 'w', encoding='utf-8') as f:
-            json.dump(self.config, f, indent=2, ensure_ascii=False)
+        for code, data in portfolio.items():
+            self.add(code, data)
     
     def calculate_profit_loss(self, code: str, current_price: float) -> Dict:
         """計算損益"""
