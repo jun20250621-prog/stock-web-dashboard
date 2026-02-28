@@ -17,6 +17,7 @@ class PortfolioManager:
         self.config = config
         self.portfolio_file = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), 
+            'stock_cli',
             'config.json'
         )
     
