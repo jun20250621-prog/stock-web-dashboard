@@ -11,6 +11,8 @@ import json
 import base64
 import io
 from datetime import datetime, timezone, timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
+import threading
 
 # 台灣時區 (UTC+8)
 def now_taiwan():
@@ -555,6 +557,88 @@ def api_import_watchlist():
         return jsonify({'success': True, 'count': count, 'errors': errors[:5] if errors else []})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+# ==================== 排程發送 Telegram ====================
+
+TELEGRAM_TOKEN = '8294937993:AAFOY_rwU33p6ndhFrnDyjKFrSQ-_1KavOE'
+TELEGRAM_CHAT_ID = '8137433836'
+
+def send_telegram(message):
+    """發送 Telegram 訊息"""
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        data = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"}
+        requests.post(url, data=data, timeout=10)
+        return True
+    except Exception as e:
+        print(f"Telegram send error: {e}")
+        return False
+
+def generate_report_message():
+    """產生報報告訊息"""
+    try:
+        # 取得持股資料
+        portfolio = pm.get_all()
+        msg = "📊 <b>盤後報告</b>\n\n"
+        msg += "🛑 <b>持股狀態：</b>\n"
+        
+        alert_stocks = []
+        for code, stock in list(portfolio.items())[:5]:
+            try:
+                price_data = screener.get_daily_price(code, 1)
+                if price_data:
+                    current_price = price_data[-1].get('close', 0)
+                    cost = stock.get('cost', 0)
+                    if cost > 0:
+                        pl_pct = ((current_price - cost) / cost) * 100
+                        if pl_pct <= -5 or pl_pct >= 10:
+                            name = stock.get('name', code)
+                            emoji = "🟢" if pl_pct > 0 else "🔴"
+                            alert_stocks.append(f"{emoji} {code} {name}: {current_price} ({pl_pct:+.2f}%)")
+            except:
+                pass
+        
+        if alert_stocks:
+            msg += "\n".join(alert_stocks)
+        else:
+            msg += "✅ 無異常波動"
+        
+        return msg
+    except Exception as e:
+        return f"Error generating report: {e}"
+
+def check_schedule():
+    """檢查排程並發送"""
+    try:
+        schedule = config.get('schedule', {})
+        now = now_taiwan()
+        current_time = now.strftime("%H:%M")
+        current_date = now.strftime("%Y-%m-%d")
+        
+        # 檢查早盤
+        morning_time = schedule.get('morning', '08:30')
+        if current_time == morning_time:
+            msg = f"🌅 <b>早盤提醒</b> - {current_date}"
+            send_telegram(msg)
+        
+        # 檢查監控時間
+        monitor_times = schedule.get('monitor', [])
+        if current_time in monitor_times:
+            msg = generate_report_message()
+            send_telegram(msg)
+        
+        # 檢查晚盤
+        evening_time = schedule.get('evening', '15:00')
+        if current_time == evening_time:
+            msg = f"🌙 <b>盤後報告</b> - {current_date}\n\n" + generate_report_message()
+            send_telegram(msg)
+    except Exception as e:
+        print(f"Schedule check error: {e}")
+
+# 啟動排程器
+scheduler = BackgroundScheduler()
+scheduler.add_job(check_schedule, 'interval', minutes=1)
+scheduler.start()
 
 # ==================== Main ====================
 
