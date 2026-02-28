@@ -14,17 +14,33 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 app = Flask(__name__, template_folder='templates')
 CORS(app)
 
+# 全域變數
+config = {}
+fm = None  # PortfolioManager
+wm = None  # WatchlistManager
+tj = None  # TradeJournal
+
 # 載入設定
 def load_config():
+    global config
     config_path = os.path.join(os.path.dirname(__file__), 'stock_cli', 'config.json')
     if os.path.exists(config_path):
         with open(config_path, 'r', encoding='utf-8') as f:
-            config = json.load(f)
+            new_config = json.load(f)
             # 修正資料庫路徑
-            if 'database' in config and 'path' in config['database']:
-                config['database']['path'] = os.path.join(os.path.dirname(__file__), config['database']['path'])
-            return config
-    return {}
+            if 'database' in new_config and 'path' in new_config['database']:
+                new_config['database']['path'] = os.path.join(os.path.dirname(__file__), new_config['database']['path'])
+            config = new_config
+    return config
+
+# 重新載入設定（用於更新後）
+def reload_config():
+    global config, fm, wm, tj
+    load_config()
+    # 重新初始化管理器
+    fm = PortfolioManager(config)
+    wm = WatchlistManager(config)
+    tj = TradeJournal(config)
 
 config = load_config()
 
@@ -196,28 +212,33 @@ def api_portfolio_add():
     data = request.json
     code = data.get('code')
     pm.add(code, data)
+    reload_config()
     return jsonify({'success': True})
 
 @app.route('/api/portfolio/update/<code>', methods=['POST'])
 def api_portfolio_update(code):
     data = request.json
     pm.update(code, data)
+    reload_config()
     return jsonify({'success': True})
 
 @app.route('/api/portfolio/delete/<code>', methods=['POST'])
 def api_portfolio_delete(code):
     pm.remove(code)
+    reload_config()
     return jsonify({'success': True})
 
 @app.route('/api/watchlist/add', methods=['POST'])
 def api_watchlist_add():
     data = request.json
     wm.add(data)
+    reload_config()
     return jsonify({'success': True})
 
 @app.route('/api/watchlist/delete/<code>', methods=['POST'])
 def api_watchlist_delete(code):
     wm.remove(code)
+    reload_config()
     return jsonify({'success': True})
 
 @app.route('/api/watchlist/update/<code>', methods=['POST'])
@@ -225,6 +246,7 @@ def api_watchlist_update(code):
     try:
         data = request.json
         wm.update(code, data)
+        reload_config()
         return jsonify({'success': True})
     except Exception as e:
         import traceback
@@ -235,6 +257,7 @@ def api_trade_add():
     data = request.json
     try:
         trade_id = tj.add_trade(data)
+        reload_config()
         return jsonify({'success': True, 'id': trade_id})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
@@ -244,6 +267,7 @@ def api_trade_update(trade_id):
     try:
         data = request.json
         tj.update_trade(trade_id, data)
+        reload_config()
         return jsonify({'success': True})
     except Exception as e:
         import traceback
@@ -252,6 +276,7 @@ def api_trade_update(trade_id):
 @app.route('/api/trade/delete/<trade_id>', methods=['POST'])
 def api_trade_delete(trade_id):
     tj.delete_trade(trade_id)
+    reload_config()
     return jsonify({'success': True})
 
 @app.route('/api/sample/generate', methods=['POST'])
