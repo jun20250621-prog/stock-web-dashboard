@@ -401,3 +401,127 @@ class TaiwanStockScreener:
         # 按動量排序
         strong_stocks.sort(key=lambda x: x.get('momentum_5d', 0), reverse=True)
         return strong_stocks[:limit]
+
+
+# ==================== 富果 API ====================
+class FugleClient:
+    """富果行情 API 客戶端"""
+    
+    def __init__(self, api_key: str = None):
+        """初始化富果客戶端"""
+        self.api_key = api_key or os.environ.get('FUGLE_API_KEY', '')
+        self.base_url = 'https://api.fugle.tw/marketdata/v1.0'
+        self.stock_api = None
+        self._init_client()
+    
+    def _init_client(self):
+        """初始化富果 API"""
+        if not self.api_key:
+            logger.warning('富果 API Key 未設定')
+            return
+        
+        try:
+            from fugle_marketdata import RestClient
+            self.client = RestClient(api_key=self.api_key)
+            self.stock_api = self.client.stock
+            logger.info('富果 API 初始化成功')
+        except ImportError:
+            logger.warning('fugle-marketdata 未安裝')
+        except Exception as e:
+            logger.error(f'富果 API 初始化失敗: {e}')
+    
+    def get_quote(self, stock_code: str) -> Optional[Dict]:
+        """取得個股報價"""
+        if not self.stock_api:
+            return None
+        
+        try:
+            # 富果 API 需要去掉 .TW 後綴
+            symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
+            quote = self.stock_api.get_quote(symbolId=symbol_id)
+            
+            if quote:
+                return {
+                    'current_price': quote.get('close'),
+                    'open': quote.get('open'),
+                    'high': quote.get('high'),
+                    'low': quote.get('low'),
+                    'volume': quote.get('volume'),
+                    'change': quote.get('change'),
+                    'change_pct': quote.get('changePercent'),
+                    'name': quote.get('name', '')
+                }
+        except Exception as e:
+            logger.error(f'富果取得 {stock_code} 報價失敗: {e}')
+        
+        return None
+    
+    def get_candles(self, stock_code: str, days: int = 90) -> Optional[Dict]:
+        """取得 K 線資料"""
+        if not self.stock_api:
+            return None
+        
+        try:
+            symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
+            candles = self.stock_api.get_candles(symbolId=symbol_id, from_=f'now-{days}d')
+            
+            if candles and len(candles) > 0:
+                # 計算技術指標
+                import pandas as pd
+                import numpy as np
+                
+                df = pd.DataFrame(candles)
+                close = df['close']
+                
+                ma5 = close.rolling(5).mean().iloc[-1] if len(close) >= 5 else None
+                ma20 = close.rolling(20).mean().iloc[-1] if len(close) >= 20 else None
+                ma60 = close.rolling(60).mean().iloc[-1] if len(close) >= 60 else None
+                
+                # RSI
+                delta = close.diff()
+                gain = delta.where(delta > 0, 0).rolling(14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+                rs = gain / loss
+                rsi = (100 - (100 / (1 + rs))).iloc[-1] if len(rs) > 0 else None
+                
+                return {
+                    'date': candles[-1].get('date'),
+                    'close': candles[-1].get('close'),
+                    'ma5': float(ma5) if ma5 and not pd.isna(ma5) else None,
+                    'ma20': float(ma20) if ma20 and not pd.isna(ma20) else None,
+                    'ma60': float(ma60) if ma60 and not pd.isna(ma60) else None,
+                    'rsi': float(rsi) if rsi and not pd.isna(rsi) else None,
+                    'volume': candles[-1].get('volume')
+                }
+        except Exception as e:
+            logger.error(f'富果取得 {stock_code} K線失敗: {e}')
+        
+        return None
+    
+    def get_price_with_indicators(self, stock_code: str) -> Optional[Dict]:
+        """取得報價與技術指標"""
+        quote = self.get_quote(stock_code)
+        candles = self.get_candles(stock_code, days=90)
+        
+        if not quote:
+            return None
+        
+        result = {
+            'current_price': quote.get('current_price') or quote.get('close'),
+            'change_pct': quote.get('change_pct') or quote.get('changePercent'),
+            'open': quote.get('open'),
+            'high': quote.get('high'),
+            'low': quote.get('low'),
+            'volume': quote.get('volume'),
+            'name': quote.get('name')
+        }
+        
+        if candles:
+            result.update({
+                'ma5': candles.get('ma5'),
+                'ma20': candles.get('ma20'),
+                'ma60': candles.get('ma60'),
+                'rsi': candles.get('rsi')
+            })
+        
+        return result

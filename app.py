@@ -52,7 +52,7 @@ def reload_config():
 config = load_config()
 
 # 初始化模組
-from data.fetcher import StockDataFetcher, TaiwanStockScreener
+from data.fetcher import StockDataFetcher, TaiwanStockScreener, FugleClient
 from data.portfolio import PortfolioManager
 from data.watchlist import WatchlistManager
 from data.trade_journal import TradeJournal
@@ -60,6 +60,9 @@ from data.strategy_lib import StrategyLibrary
 
 fetcher = StockDataFetcher()
 screener = TaiwanStockScreener()
+# 富果 API 客戶端（從環境變數或設定取得 API Key）
+fugle_api_key = os.environ.get('FUGLE_API_KEY', config.get('fugle_api_key', ''))
+fugle = FugleClient(fugle_api_key) if fugle_api_key else None
 pm = PortfolioManager(config)
 wm = WatchlistManager(config)
 tj = TradeJournal(config)
@@ -305,7 +308,7 @@ def api_portfolio_analyze(code):
     """分析單一股票"""
     try:
         # 先更新分析資料
-        pm.update_analysis(code, fetcher)
+        pm.update_analysis(code, fetcher, fugle)
         analysis = pm.analyze_stock(code)
         if analysis:
             return jsonify({'success': True, 'data': analysis})
@@ -319,7 +322,7 @@ def api_portfolio_analyze_all():
     """分析所有持股"""
     try:
         # 先更新所有持股的分析資料
-        pm.update_all_analysis(fetcher)
+        pm.update_all_analysis(fetcher, fugle)
         portfolio = pm.get_all()
         results = []
         for code in portfolio:

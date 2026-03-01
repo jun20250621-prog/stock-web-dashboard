@@ -390,13 +390,23 @@ class PortfolioManager:
             'reason': reason
         }
     
-    def update_analysis(self, code: str, fetcher) -> Optional[Dict]:
+    def update_analysis(self, code: str, fetcher, fugle=None) -> Optional[Dict]:
         """更新股票分析資料（從 API 獲取）"""
         try:
-            # 取得現價
-            price_data = fetcher.get_price(code)
-            # 取得歷史資料（計算技術指標）
-            hist_data = fetcher.get_historical(code, days=90)
+            # 優先使用富果 API，若無則用 yfinance
+            price_data = None
+            hist_data = None
+            
+            if fugle:
+                # 嘗試使用富果 API
+                price_data = fugle.get_price_with_indicators(code)
+                if price_data:
+                    print(f"使用富果 API 取得 {code} 報價成功")
+            
+            # 如果富果沒有資料，嘗試 yfinance
+            if not price_data or not price_data.get('current_price'):
+                price_data = fetcher.get_price(code)
+                hist_data = fetcher.get_historical(code, days=90)
             
             if not price_data:
                 return None
@@ -406,14 +416,14 @@ class PortfolioManager:
                 return None
             
             # 取得漲跌幅
-            change_pct = price_data.get('change_pct') or price_data.get('change')
+            change_pct = price_data.get('change_pct') or price_data.get('change') or price_data.get('changePercent')
             
             # 從歷史資料提取技術指標
-            ma5 = hist_data.get('ma5') if hist_data else None
-            ma20 = hist_data.get('ma20') if hist_data else None
-            ma60 = hist_data.get('ma60') if hist_data else None
-            rsi = hist_data.get('rsi') if hist_data else None
-            volume = hist_data.get('volume') if hist_data else None
+            ma5 = price_data.get('ma5') or (hist_data.get('ma5') if hist_data else None)
+            ma20 = price_data.get('ma20') or (hist_data.get('ma20') if hist_data else None)
+            ma60 = price_data.get('ma60') or (hist_data.get('ma60') if hist_data else None)
+            rsi = price_data.get('rsi') or (hist_data.get('rsi') if hist_data else None)
+            volume = price_data.get('volume') or (hist_data.get('volume') if hist_data else None)
             
             # 計算損益
             stock = self.get(code)
@@ -465,12 +475,12 @@ class PortfolioManager:
             print(f"更新 {code} 分析資料失敗: {e}")
             return None
     
-    def update_all_analysis(self, fetcher) -> List[Dict]:
+    def update_all_analysis(self, fetcher, fugle=None) -> List[Dict]:
         """更新所有持股的分析資料"""
         portfolio = self.get_all()
         results = []
         for code in portfolio:
-            result = self.update_analysis(code, fetcher)
+            result = self.update_analysis(code, fetcher, fugle)
             if result:
                 results.append(result)
         return results
