@@ -53,7 +53,7 @@
     <nav class="navbar navbar-dark navbar-expand-lg">
         <div class="container-fluid">
             <a class="navbar-brand" href="javascript:location.reload()">
-                <i class="fas fa-chart-line me-2"></i>台股智能分析系統 <span class="badge bg-warning text-dark">v1.4</span>
+                <i class="fas fa-chart-line me-2"></i>台股智能分析系統 <span class="badge bg-warning text-dark">v1.5</span>
             </a>
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="javascript:loadAll()"><i class="fas fa-sync-alt me-1"></i>重新整理</a></li>
@@ -274,7 +274,7 @@
     }
     
     // 初始化
-    log('info', '系統', '台股智能分析系統 v1.4 啟動');
+    log('info', '系統', '台股智能分析系統 v1.5 啟動');
     let disciplineChart, strategyChart, mainChart;
     let portfolioData=[], watchlistData=[], tradesData=[];
     const modal = new bootstrap.Modal(document.getElementById('editModal'));
@@ -332,6 +332,14 @@
 
     async function loadPortfolio(){
         try{
+            // 先呼叫更新所有股價API
+            showInfo('持股載入', '正在更新股價...');
+            try{
+                await fetch('/api/portfolio/update_all_prices', {method: 'POST'});
+            }catch(e){
+                console.log('更新股價失敗', e);
+            }
+            
             const resp = await fetch('/api/portfolio?t=' + Date.now());
             portfolioData = await resp.json();
             let html = ''; let totalValue = 0, totalCost = 0;
@@ -641,14 +649,18 @@
             const result = await resp.json();
             if(result.success){
                 modal.hide(); 
-                // 新增後自動取得現價
+                // 新增後呼叫分析API來取得並儲存現價
                 setTimeout(async () => {
                     try{
-                        const priceRes = await fetch('/api/portfolio/update_price/'+code, {method:'POST'});
-                        const priceResult = await priceRes.json();
-                        log('info', '新增持股', `已新增 ${code} 並更新現價: ${priceResult.data?.current_price || 'N/A'}`);
+                        const analyzeRes = await fetch('/api/portfolio/analyze/'+code);
+                        const analyzeResult = await analyzeRes.json();
+                        if(analyzeResult.success && analyzeResult.data){
+                            showSuccess('已新增 '+code, '現價: '+analyzeResult.data.current_price);
+                        }else{
+                            showWarning('已新增 '+code, '但無法取得現價');
+                        }
                     }catch(e){
-                        log('warn', '新增持股', `已新增 ${code} 但無法取得現價`);
+                        showWarning('已新增 '+code, '但無法取得現價');
                     }
                     loadPortfolio();
                 }, 500);

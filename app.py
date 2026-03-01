@@ -409,14 +409,60 @@ def api_portfolio_analyze(code):
 def api_portfolio_analyze_all():
     """分析所有持股"""
     try:
-        # 先更新所有持股的分析資料
-        pm.update_all_analysis(fetcher, fugle)
+        import requests
+        import os
+        
         portfolio = pm.get_all()
         results = []
+        
+        itick_key = os.environ.get('ITICK_API_KEY', '')
+        
+        for code in portfolio:
+            try:
+                # 直接使用 iTick API 取得現價
+                url = 'https://api.itick.org/stock/quote'
+                params = {'region': 'TW', 'code': code.replace('.TW','')}
+                headers = {'token': itick_key, 'accept': 'application/json'}
+                
+                current_price = None
+                change_pct = None
+                
+                try:
+                    resp = requests.get(url, params=params, headers=headers, timeout=5)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if data.get('data'):
+                            quote = data['data']
+                            current_price = quote.get('p')
+                            change_pct = quote.get('chp')
+                except:
+                    pass
+                
+                # 如果有取得現價，更新資料庫
+                if current_price:
+                    stock = pm.get(code)
+                    if stock:
+                        cost = stock.get('cost', 0)
+                        shares = stock.get('shares', 0)
+                        profit_loss = (current_price - cost) * shares if cost > 0 else 0
+                        profit_loss_pct = (profit_loss / (cost * shares) * 100) if cost * shares > 0 else 0
+                        
+                        pm.update_price_and_analysis(code, {
+                            'current_price': current_price,
+                            'price_updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            'profit_loss': profit_loss,
+                            'profit_loss_pct': profit_loss_pct,
+                            'change_pct': change_pct
+                        })
+            except:
+                pass
+        
+        # 取得更新後的資料
         for code in portfolio:
             analysis = pm.analyze_stock(code)
             if analysis:
                 results.append(analysis)
+        
         return jsonify({'success': True, 'data': results})
     except Exception as e:
         import traceback
@@ -426,10 +472,49 @@ def api_portfolio_analyze_all():
 def api_portfolio_update_price(code):
     """更新單一股票價格"""
     try:
-        result = pm.update_analysis(code, fetcher)
-        if result:
-            return jsonify({'success': True, 'data': result})
-        return jsonify({'success': False, 'error': '更新失敗'}), 404
+        import requests
+        import os
+        
+        # 直接使用 iTick API 取得現價
+        itick_key = os.environ.get('ITICK_API_KEY', '')
+        url = 'https://api.itick.org/stock/quote'
+        params = {'region': 'TW', 'code': code.replace('.TW','')}
+        headers = {'token': itick_key, 'accept': 'application/json'}
+        
+        current_price = None
+        change_pct = None
+        
+        try:
+            resp = requests.get(url, params=params, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get('data'):
+                    quote = data['data']
+                    current_price = quote.get('p')
+                    change_pct = quote.get('chp')
+        except:
+            pass
+        
+        if current_price:
+            stock = pm.get(code)
+            if stock:
+                cost = stock.get('cost', 0)
+                shares = stock.get('shares', 0)
+                profit_loss = (current_price - cost) * shares if cost > 0 else 0
+                profit_loss_pct = (profit_loss / (cost * shares) * 100) if cost * shares > 0 else 0
+                
+                pm.update_price_and_analysis(code, {
+                    'current_price': current_price,
+                    'price_updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'profit_loss': profit_loss,
+                    'profit_loss_pct': profit_loss_pct,
+                    'change_pct': change_pct
+                })
+                analysis = pm.analyze_stock(code)
+                if analysis:
+                    return jsonify({'success': True, 'data': analysis})
+        
+        return jsonify({'success': False, 'error': '無法更新股價'}), 404
     except Exception as e:
         import traceback
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -438,7 +523,52 @@ def api_portfolio_update_price(code):
 def api_portfolio_update_all_prices():
     """更新所有持股價格"""
     try:
-        results = pm.update_all_analysis(fetcher)
+        import requests
+        import os
+        
+        portfolio = pm.get_all()
+        results = []
+        itick_key = os.environ.get('ITICK_API_KEY', '')
+        
+        for code in portfolio:
+            try:
+                url = 'https://api.itick.org/stock/quote'
+                params = {'region': 'TW', 'code': code.replace('.TW','')}
+                headers = {'token': itick_key, 'accept': 'application/json'}
+                
+                current_price = None
+                change_pct = None
+                
+                try:
+                    resp = requests.get(url, params=params, headers=headers, timeout=5)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if data.get('data'):
+                            quote = data['data']
+                            current_price = quote.get('p')
+                            change_pct = quote.get('chp')
+                except:
+                    pass
+                
+                if current_price:
+                    stock = pm.get(code)
+                    if stock:
+                        cost = stock.get('cost', 0)
+                        shares = stock.get('shares', 0)
+                        profit_loss = (current_price - cost) * shares if cost > 0 else 0
+                        profit_loss_pct = (profit_loss / (cost * shares) * 100) if cost * shares > 0 else 0
+                        
+                        pm.update_price_and_analysis(code, {
+                            'current_price': current_price,
+                            'price_updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            'profit_loss': profit_loss,
+                            'profit_loss_pct': profit_loss_pct,
+                            'change_pct': change_pct
+                        })
+                        results.append({'code': code, 'price': current_price, 'success': True})
+            except:
+                pass
+        
         return jsonify({'success': True, 'data': results, 'count': len(results)})
     except Exception as e:
         import traceback
