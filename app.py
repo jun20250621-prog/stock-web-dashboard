@@ -966,30 +966,29 @@ def api_backup_restore():
 def api_test_fugle(code):
     """測試股價API"""
     try:
-        # 優先使用 yfinance
-        price = fetcher.get_price(code)
-        hist = fetcher.get_historical(code, days=90)
+        import os
+        import requests
         
-        if price and price.get('current_price'):
-            return jsonify({
-                'success': True, 
-                'source': 'yfinance',
-                'data': {
-                    'current_price': price.get('current_price'),
-                    'change_pct': price.get('change_pct'),
-                    'volume': price.get('volume'),
-                    'ma5': hist.get('ma5') if hist else None,
-                    'ma20': hist.get('ma20') if hist else None,
-                    'rsi': hist.get('rsi') if hist else None
-                }
-            })
+        # 檢查環境變數
+        itick_key = os.environ.get('ITICK_API_KEY', '')
         
-        # 如果 yfinance 失敗，嘗試富果
-        if fugle:
-            fugle_price = fugle.get_price_with_indicators(code)
-            if fugle_price:
-                return jsonify({
-                    'success': True, 
+        # 直接用 requests 測試 iTick
+        url = 'https://api.itick.org/stock/quote'
+        params = {'region': 'TW', 'code': code}
+        headers = {'token': itick_key, 'accept': 'application/json'}
+        
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        
+        return jsonify({
+            'url': resp.url,
+            'status': resp.status_code,
+            'response': resp.text[:500] if resp.text else 'empty',
+            'itick_key_set': bool(itick_key),
+            'itick_key_prefix': itick_key[:10] + '...' if itick_key else 'NOT_SET'
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}) 
                     'source': 'fugle',
                     'data': fugle_price
                 })
