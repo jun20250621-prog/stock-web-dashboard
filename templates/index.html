@@ -635,12 +635,23 @@
             <div class="mb-2"><label>買入日期</label><input class="form-control" id="pBuyDate" type="date"></div>
         `;
         document.getElementById('modalSave').onclick = async () => {
-            const data = {code:document.getElementById('pCode').value, name:document.getElementById('pName').value, cost:parseFloat(document.getElementById('pCost').value), shares:parseInt(document.getElementById('pShares').value), stop_loss:parseFloat(document.getElementById('pStopLoss').value), stop_profit:parseFloat(document.getElementById('pStopProfit').value), industry:document.getElementById('pIndustry').value, application:document.getElementById('pApplication').value, buy_date:document.getElementById('pBuyDate').value};
+            const code = document.getElementById('pCode').value;
+            const data = {code:code, name:document.getElementById('pName').value, cost:parseFloat(document.getElementById('pCost').value), shares:parseInt(document.getElementById('pShares').value), stop_loss:parseFloat(document.getElementById('pStopLoss').value), stop_profit:parseFloat(document.getElementById('pStopProfit').value), industry:document.getElementById('pIndustry').value, application:document.getElementById('pApplication').value, buy_date:document.getElementById('pBuyDate').value};
             const resp = await fetch('/api/portfolio/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
             const result = await resp.json();
             if(result.success){
                 modal.hide(); 
-                setTimeout(() => { loadPortfolio(); }, 100);
+                // 新增後自動取得現價
+                setTimeout(async () => {
+                    try{
+                        const priceRes = await fetch('/api/portfolio/update_price/'+code, {method:'POST'});
+                        const priceResult = await priceRes.json();
+                        log('info', '新增持股', `已新增 ${code} 並更新現價: ${priceResult.data?.current_price || 'N/A'}`);
+                    }catch(e){
+                        log('warn', '新增持股', `已新增 ${code} 但無法取得現價`);
+                    }
+                    loadPortfolio();
+                }, 500);
             }else{
                 alert('儲存失敗: ' + (result.error || '未知錯誤'));
             }
