@@ -393,20 +393,16 @@ class PortfolioManager:
     def update_analysis(self, code: str, fetcher, fugle=None) -> Optional[Dict]:
         """更新股票分析資料（從 API 獲取）"""
         try:
-            # 優先使用富果 API，若無則用 yfinance
-            price_data = None
-            hist_data = None
+            # 優先使用 yfinance
+            price_data = fetcher.get_price(code)
+            hist_data = fetcher.get_historical(code, days=90)
             
-            if fugle:
-                # 嘗試使用富果 API
-                price_data = fugle.get_price_with_indicators(code)
-                if price_data:
-                    print(f"使用富果 API 取得 {code} 報價成功")
-            
-            # 如果富果沒有資料，嘗試 yfinance
+            # 如果 yfinance 失敗，嘗試富果
             if not price_data or not price_data.get('current_price'):
-                price_data = fetcher.get_price(code)
-                hist_data = fetcher.get_historical(code, days=90)
+                if fugle:
+                    price_data = fugle.get_price_with_indicators(code)
+                    if price_data:
+                        print(f"使用富果 API 取得 {code} 報價成功")
             
             if not price_data:
                 return None

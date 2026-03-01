@@ -866,24 +866,37 @@ def api_backup_restore():
 
 @app.route('/api/test_fugle/<code>', methods=['GET'])
 def api_test_fugle(code):
-    """測試富果 API"""
+    """測試股價API"""
     try:
-        # 檢查 API Key 狀態
-        fugle_key = os.environ.get('FUGLE_API_KEY', 'NOT_SET')
-        key_status = '已設定' if fugle_key != 'NOT_SET' and fugle_key else '未設定'
+        # 優先使用 yfinance
+        price = fetcher.get_price(code)
+        hist = fetcher.get_historical(code, days=90)
         
-        if not fugle or not fugle.stock_api:
+        if price and price.get('current_price'):
             return jsonify({
-                'success': False, 
-                'error': '富果 API 未初始化',
-                'key_status': key_status,
-                'fugle_api_key': fugle_key[:10]+'...' if fugle_key and len(fugle_key) > 10 else fugle_key
+                'success': True, 
+                'source': 'yfinance',
+                'data': {
+                    'current_price': price.get('current_price'),
+                    'change_pct': price.get('change_pct'),
+                    'volume': price.get('volume'),
+                    'ma5': hist.get('ma5') if hist else None,
+                    'ma20': hist.get('ma20') if hist else None,
+                    'rsi': hist.get('rsi') if hist else None
+                }
             })
         
-        result = fugle.get_price_with_indicators(code)
-        if result:
-            return jsonify({'success': True, 'data': result, 'key_status': key_status})
-        return jsonify({'success': False, 'error': '無法取得報價', 'key_status': key_status})
+        # 如果 yfinance 失敗，嘗試富果
+        if fugle:
+            fugle_price = fugle.get_price_with_indicators(code)
+            if fugle_price:
+                return jsonify({
+                    'success': True, 
+                    'source': 'fugle',
+                    'data': fugle_price
+                })
+        
+        return jsonify({'success': False, 'error': '無法取得報價'})
     except Exception as e:
         import traceback
         return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()})
