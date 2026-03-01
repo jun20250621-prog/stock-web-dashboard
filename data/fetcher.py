@@ -609,3 +609,85 @@ class TWSEClient:
         except:
             pass
         return None
+
+
+# ==================== iTick WebSocket API ====================
+import asyncio
+
+class iTickClient:
+    """iTick WebSocket 即時報價客戶端"""
+    
+    def __init__(self, api_key: str = None):
+        self.api_key = api_key or os.environ.get('ITICK_API_KEY', '')
+        self.ws = None
+        self.prices = {}  # 緩存最新價格
+        self.connected = False
+        self.loop = None
+    
+    async def connect(self):
+        """連接 iTick WebSocket"""
+        if not self.api_key:
+            logger.warning('iTick API Key 未設定')
+            return False
+        
+        try:
+            import websockets
+            uri = f"wss://api.itick.org/stock?token={self.api_key}"
+            self.ws = await websockets.connect(uri)
+            self.connected = True
+            logger.info('iTick WebSocket 連接成功')
+            return True
+        except Exception as e:
+            logger.error(f'iTick WebSocket 連接失敗: {e}')
+            self.connected = False
+            return False
+    
+    async def subscribe(self, codes: list):
+        """訂閱股票報價"""
+        if not self.ws or not self.connected:
+            await self.connect()
+        
+        if self.ws and self.connected:
+            # 轉換代碼格式 (2330 -> 2330$TW)
+            symbols = ','.join([f"{code}$TW" for code in codes])
+            subscribe_message = {
+                "ac": "subscribe",
+                "params": symbols,
+                "types": "quote"
+            }
+            await self.ws.send(json.dumps(subscribe_message))
+            logger.info(f'iTick 訂閱: {symbols}')
+    
+    async def receive(self):
+        """接收即時報價"""
+        if not self.ws:
+            return None
+        
+        try:
+            async for message in self.ws:
+                data = json.loads(message)
+                if data.get('data'):
+                    for symbol, quote in data['data'].items():
+                        code = symbol.replace('$TW', '')
+                        self.prices[code] = {
+                            'current_price': quote.get('last'),
+                            'change': quote.get('change'),
+                            'change_pct': quote.get('chg_percent'),
+                            'volume': quote.get('volume'),
+                            'name': quote.get('name', '')
+                        }
+                return self.prices
+        except Exception as e:
+            logger.error(f'iTick 接收失敗: {e}')
+            self.connected = False
+            return None
+    
+    def get_price(self, code: str) -> Optional[Dict]:
+        """取得緩存的價格"""
+        return self.prices.get(code)
+    
+    async def close(self):
+        """關閉連接"""
+        if self.ws:
+            await self.ws.close()
+            self.connected = False
