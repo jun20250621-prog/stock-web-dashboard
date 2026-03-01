@@ -217,6 +217,17 @@ def api_strong_stocks():
             {'code': '4977', 'name': '眾達-KY', 'industry': '光電'},
             {'code': '1590', 'name': '亞德客-KY', 'industry': '氣動'},
         ]
+        
+        stocks = screener.screen_strong_stocks(limit=10)
+        
+        for stock in stocks:
+            stock['change_pct'] = round(stock.get('change_pct', 0), 2)
+            stock['momentum_5d'] = round(stock.get('momentum_5d', 0), 2)
+        
+        return jsonify({'success': True, 'data': popular_stocks + stocks[:5]})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()})
 
 @app.route('/api/stocks_db', methods=['GET'])
 def api_stocks_db():
