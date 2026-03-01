@@ -929,6 +929,15 @@ def api_backup():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/debug/env', methods=['GET'])
+def api_debug_env():
+    """檢查環境變數"""
+    import os
+    return jsonify({
+        'FUGLE_API_KEY': os.environ.get('FUGLE_API_KEY', 'NOT_SET')[:10]+'...' if os.environ.get('FUGLE_API_KEY') else 'NOT_SET',
+        'ITICK_API_KEY': os.environ.get('ITICK_API_KEY', 'NOT_SET')[:10]+'...' if os.environ.get('ITICK_API_KEY') else 'NOT_SET',
+    })
+
 @app.route('/api/backup/restore', methods=['POST'])
 def api_backup_restore():
     """從備份還原"""
