@@ -217,6 +217,45 @@ def api_strong_stocks():
             {'code': '4977', 'name': '眾達-KY', 'industry': '光電'},
             {'code': '1590', 'name': '亞德客-KY', 'industry': '氣動'},
         ]
+
+@app.route('/api/stocks_db', methods=['GET'])
+def api_stocks_db():
+    """股票資料庫 API"""
+    import json
+    db_path = os.path.join(os.path.dirname(__file__), 'data', 'stock_db.json')
+    try:
+        with open(db_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return jsonify({'success': True, 'data': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/stocks_db/search', methods=['GET'])
+def api_stocks_search():
+    """股票搜尋 API"""
+    import json
+    query = request.args.get('q', '').lower()
+    db_path = os.path.join(os.path.dirname(__file__), 'data', 'stock_db.json')
+    try:
+        with open(db_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 搜尋
+        results = []
+        for section, stocks in data.items():
+            if isinstance(stocks, list):
+                for stock in stocks:
+                    if query in stock.get('代號', '').lower() or query in stock.get('名稱', '').lower():
+                        results.append({
+                            'code': stock.get('代號'),
+                            'name': stock.get('名稱'),
+                            'industry': stock.get('產業'),
+                            'application': stock.get('應用')
+                        })
+        
+        return jsonify({'success': True, 'data': results})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
         
         results = []
         for stock in popular_stocks:
