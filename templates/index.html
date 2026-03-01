@@ -83,7 +83,7 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between">
                         <span><i class="fas fa-wallet me-2"></i>持股名單</span>
-                        <div><button class="btn btn-sm btn-success me-1" onclick="showAddPortfolio()"><i class="fas fa-plus"></i>新增</button><button class="btn btn-sm btn-outline-primary me-1" onclick="exportPortfolio()"><i class="fas fa-download"></i>匯出</button><label class="btn btn-sm btn-outline-secondary me-1 mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importPortfolio(this)"></label><button class="btn btn-sm btn-outline-warning" onclick="downloadBackup()"><i class="fas fa-save"></i>備份</button></div>
+                        <div><button class="btn btn-sm btn-info me-1" onclick="analyzeAll()"><i class="fas fa-chart-line"></i>分析</button><button class="btn btn-sm btn-success me-1" onclick="showAddPortfolio()"><i class="fas fa-plus"></i>新增</button><button class="btn btn-sm btn-outline-primary me-1" onclick="exportPortfolio()"><i class="fas fa-download"></i>匯出</button><label class="btn btn-sm btn-outline-secondary me-1 mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importPortfolio(this)"></label><button class="btn btn-sm btn-outline-warning" onclick="downloadBackup()"><i class="fas fa-save"></i>備份</button></div>
                     </div>
                     <div class="card-body"><div class="table-responsive"><table class="table table-hover" id="portfolioTable"><thead><tr><th>股票</th><th>股數</th><th>成本</th><th>現價</th><th>漲跌幅</th><th>損益</th><th>損益率</th><th>停損</th><th>停利</th><th>產業</th><th>應用</th><th>買入日</th><th>操作</th></tr></thead><tbody></tbody></table></div></div>
                 </div>
@@ -178,6 +178,23 @@
             </div>
         </div>
     </div>
+    <!-- 股票分析 Modal -->
+    <div class="modal fade" id="analyzeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-chart-line me-2"></i>股票分析 - <span id="analyzeCode"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="analyzeContent">
+                    <div class="text-center"><div class="spinner-border"></div></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- 編輯 Modal -->
     <div class="modal fade" id="editModal" tabindex="-1">
         <div class="modal-dialog"><div class="modal-content">
@@ -227,7 +244,7 @@
                 totalValue += (s.current_price||0)*(s.shares||1000); totalCost += (s.cost||0)*(s.shares||1000);
                 const pc = (s.profit_loss||0)>=0?'profit-positive':'profit-negative';
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
-                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.shares||'-'}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.stop_loss||'-'}</td><td>${s.stop_profit||'-'}</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.shares||'-'}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.stop_loss||'-'}</td><td>${s.stop_profit||'-'}</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-info me-1" onclick='analyzeStock("${s.code}")'><i class="fas fa-chart-line"></i></button><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
             document.querySelector('#portfolioTable tbody').innerHTML = html || '<tr><td colspan="13" class="text-center">無持股資料</td></tr>';
             const totalPL = totalValue-totalCost, totalPLPct = totalCost>0?totalPL/totalCost*100:0;
@@ -255,6 +272,120 @@
             await fetch('/api/portfolio/update/'+code, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
             modal.hide(); loadPortfolio();
         };
+
+    async function analyzeStock(code){
+        document.getElementById('analyzeCode').textContent = code;
+        document.getElementById('analyzeContent').innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
+        const modal = new bootstrap.Modal(document.getElementById('analyzeModal'));
+        modal.show();
+        
+        try{
+            const res = await fetch('/api/portfolio/analyze/'+code);
+            const json = await res.json();
+            if(json.success){
+                const d = json.data;
+                const recClass = d.recommendation === 'sell' ? 'text-danger' : d.recommendation === 'buy' ? 'text-success' : 'text-warning';
+                const recIcon = d.recommendation === 'sell' ? 'fa-arrow-down' : d.recommendation === 'buy' ? 'fa-arrow-up' : 'fa-minus';
+                document.getElementById('analyzeContent').innerHTML = `
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">基本資料</div>
+                                <div class="card-body">
+                                    <p><strong>股名：</strong>${d.name||'-'}</p>
+                                    <p><strong>成本：</strong>${d.cost||'-'} 元</p>
+                                    <p><strong>股數：</strong>${d.shares||'-'} 股</p>
+                                    <p><strong>現價：</strong>${d.current_price||'-'} 元</p>
+                                    <p><strong>產業：</strong>${d.industry||'-'}</p>
+                                    <p><strong>應用：</strong>${d.application||'-'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">損益分析</div>
+                                <div class="card-body">
+                                    <p><strong>損益金額：</strong><span class="${(d.profit_loss||0)>=0?'text-success':'text-danger'}">${(d.profit_loss||0)>=0?'+':''}${d.profit_loss?.toLocaleString()||'-'} 元</span></p>
+                                    <p><strong>損益率：</strong><span class="${(d.profit_loss_pct||0)>=0?'text-success':'text-danger'}">${(d.profit_loss_pct||0)>=0?'+':''}${d.profit_loss_pct?.toFixed(2)||'-'}%</span></p>
+                                    <p><strong>漲跌幅：</strong><span class="${(d.change_pct||0)>=0?'text-danger':'text-success'}">${(d.change_pct||0)>=0?'+':''}${d.change_pct?.toFixed(2)||'-'}%</span></p>
+                                    <p><strong>停損點：</strong>${d.stop_loss||'-'} 元</p>
+                                    <p><strong>停利點：</strong>${d.stop_profit||'-'} 元</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">技術指標</div>
+                                <div class="card-body">
+                                    <p><strong>MA5：</strong>${d.ma5||'-'} 元</p>
+                                    <p><strong>MA20：</strong>${d.ma20||'-'} 元</p>
+                                    <p><strong>RSI：</strong>${d.rsi||'-'}</p>
+                                    <p><strong>成交量：</strong>${d.volume?.toLocaleString()||'-'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">基本面</div>
+                                <div class="card-body">
+                                    <p><strong>本益比：</strong>${d.pe_ratio||'-'}</p>
+                                    <p><strong>EPS：</strong>${d.eps||'-'}</p>
+                                    <p><strong>殖利率：</strong>${d.dividend_yield||'-'}%</p>
+                                    <p><strong>分析師目標價：</strong>${d.analyst_target||'-'} 元</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5><i class="fas ${recIcon} me-2"></i>建議：<span class="${recClass}">${d.recommendation === 'sell' ? '賣出' : d.recommendation === 'buy' ? '買入' : '續抱'}</span></h5>
+                            <p class="mb-0">${d.reason||'-'}</p>
+                        </div>
+                    </div>
+                `;
+            }else{
+                document.getElementById('analyzeContent').innerHTML = '<div class="alert alert-danger">'+json.error+'</div>';
+            }
+        }catch(e){
+            document.getElementById('analyzeContent').innerHTML = '<div class="alert alert-danger">載入失敗：'+e.message+'</div>';
+        }
+    }
+
+    async function analyzeAll(){
+        try{
+            const res = await fetch('/api/portfolio/analyze_all');
+            const json = await res.json();
+            if(json.success && json.data.length > 0){
+                document.getElementById('analyzeCode').textContent = '全部持股';
+                let html = '<div class="table-responsive"><table class="table table-hover"><thead><tr><th>股票</th><th>現價</th><th>損益%</th><th>漲跌幅%</th><th>MA5</th><th>MA20</th><th>RSI</th><th>建議</th><th>原因</th></tr></thead><tbody>';
+                json.data.forEach(d => {
+                    const recClass = d.recommendation === 'sell' ? 'text-danger' : d.recommendation === 'buy' ? 'text-success' : 'text-warning';
+                    const recText = d.recommendation === 'sell' ? '賣出' : d.recommendation === 'buy' ? '買入' : '續抱';
+                    html += `<tr>
+                        <td><b>${d.code}</b> ${d.name||''}</td>
+                        <td>${d.current_price||'-'}</td>
+                        <td class="${(d.profit_loss_pct||0)>=0?'text-success':'text-danger'}">${(d.profit_loss_pct||0)>=0?'+':''}${d.profit_loss_pct?.toFixed(2)||'-'}%</td>
+                        <td class="${(d.change_pct||0)>=0?'text-danger':'text-success'}">${(d.change_pct||0)>=0?'+':''}${d.change_pct?.toFixed(2)||'-'}%</td>
+                        <td>${d.ma5||'-'}</td>
+                        <td>${d.ma20||'-'}</td>
+                        <td>${d.rsi||'-'}</td>
+                        <td class="${recClass}">${recText}</td>
+                        <td>${d.reason||''}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+                document.getElementById('analyzeContent').innerHTML = html;
+                const modal = new bootstrap.Modal(document.getElementById('analyzeModal'));
+                modal.show();
+            }else{
+                alert('無持股資料');
+            }
+        }catch(e){
+            alert('分析失敗：'+e.message);
+        }
+    }
         modal.show();
     }
 

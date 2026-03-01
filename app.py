@@ -300,6 +300,33 @@ def api_portfolio_delete(code):
     reload_config()
     return jsonify({'success': True})
 
+@app.route('/api/portfolio/analyze/<code>', methods=['GET'])
+def api_portfolio_analyze(code):
+    """分析單一股票"""
+    try:
+        analysis = pm.analyze_stock(code)
+        if analysis:
+            return jsonify({'success': True, 'data': analysis})
+        return jsonify({'success': False, 'error': '股票不存在'}), 404
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/portfolio/analyze_all', methods=['GET'])
+def api_portfolio_analyze_all():
+    """分析所有持股"""
+    try:
+        portfolio = pm.get_all()
+        results = []
+        for code in portfolio:
+            analysis = pm.analyze_stock(code)
+            if analysis:
+                results.append(analysis)
+        return jsonify({'success': True, 'data': results})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/watchlist/add', methods=['POST'])
 def api_watchlist_add():
     try:
