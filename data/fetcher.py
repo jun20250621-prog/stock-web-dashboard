@@ -432,13 +432,14 @@ class FugleClient:
     
     def get_quote(self, stock_code: str) -> Optional[Dict]:
         """取得個股報價"""
-        # 優先嘗試 HTTP 直接請求（不依賴 SDK）
+        # 使用 HTTP 直接請求富果 API
         try:
             import requests
             symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
-            url = f'https://api.fugle.tw/marketdata/v1.0/stock/quote?symbolId={symbol_id}'
+            url = f'https://api.fugle.tw/marketdata/v1.0/stock/quotes/{symbol_id}'
             headers = {'api-key': self.api_key}
             resp = requests.get(url, headers=headers, timeout=10)
+            
             if resp.status_code == 200:
                 data = resp.json()
                 if data.get('data'):
@@ -458,73 +459,54 @@ class FugleClient:
         except Exception as e:
             logger.error(f'富果 HTTP 请求异常: {e}')
         
-        # SDK 備用
-        if not self.stock_api:
-            logger.warning('富果 API 未初始化，api_key: '+str(self.api_key[:10] if self.api_key else 'None')+'...')
-            return None
-        
-        try:
-            # 富果 API 需要去掉 .TW 後綴
-            symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
-            logger.info(f'富果 API 查詢: {symbol_id}')
-            quote = self.stock_api.get_quote(symbolId=symbol_id)
-            logger.info(f'富果 API 回應: {quote}')
-            
-            if quote:
-                return {
-                    'current_price': quote.get('close'),
-                    'open': quote.get('open'),
-                    'high': quote.get('high'),
-                    'low': quote.get('low'),
-                    'volume': quote.get('volume'),
-                    'change': quote.get('change'),
-                    'change_pct': quote.get('changePercent'),
-                    'name': quote.get('name', '')
-                }
-            else:
-                logger.warning(f'富果 API 回應空值 for {symbol_id}')
-        except Exception as e:
-            logger.error(f'富果取得 {stock_code} 報價失敗: {e}')
-        
         return None
     
     def get_candles(self, stock_code: str, days: int = 90) -> Optional[Dict]:
         """取得 K 線資料"""
-        if not self.stock_api:
-            return None
-        
         try:
-            symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
-            candles = self.stock_api.get_candles(symbolId=symbol_id, from_=f'now-{days}d')
+            import requests
+            import pandas as pd
+            import numpy as np
+            from datetime import datetime, timedelta
             
-            if candles and len(candles) > 0:
-                # 計算技術指標
-                import pandas as pd
-                import numpy as np
-                
-                df = pd.DataFrame(candles)
-                close = df['close']
-                
-                ma5 = close.rolling(5).mean().iloc[-1] if len(close) >= 5 else None
-                ma20 = close.rolling(20).mean().iloc[-1] if len(close) >= 20 else None
-                ma60 = close.rolling(60).mean().iloc[-1] if len(close) >= 60 else None
-                
-                # RSI
-                delta = close.diff()
-                gain = delta.where(delta > 0, 0).rolling(14).mean()
-                loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-                rs = gain / loss
-                rsi = (100 - (100 / (1 + rs))).iloc[-1] if len(rs) > 0 else None
-                
-                return {
-                    'date': candles[-1].get('date'),
-                    'close': candles[-1].get('close'),
-                    'ma5': float(ma5) if ma5 and not pd.isna(ma5) else None,
-                    'ma20': float(ma20) if ma20 and not pd.isna(ma20) else None,
-                    'ma60': float(ma60) if ma60 and not pd.isna(ma60) else None,
-                    'rsi': float(rsi) if rsi and not pd.isna(rsi) else None,
-                    'volume': candles[-1].get('volume')
-                }
+            symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
+            
+            url = f'https://api.fugle.tw/marketdata/v1.0/stock/candles'
+            params = {
+                'symbolId': symbol_id,
+                'from': start_date.strftime('%Y-%m-%d'),
+                'to': end_date.strftime('%Y-%m-%d'),
+                'api-key': self.api_key
+            }
+            resp = requests.get(url, params=params, timeout=10)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get('data') and len(data['data']) > 0:
+                    candles = data['data']
+                    df = pd.DataFrame(candles)
+                    close = df['close']
+                    
+                    ma5 = close.rolling(5).mean().iloc[-1] if len(close) >= 5 else None
+                    ma20 = close.rolling(20).mean().iloc[-1] if len(close) >= 20 else None
+                    
+                    # RSI
+                    delta = close.diff()
+                    gain = delta.where(delta > 0, 0).rolling(14).mean()
+                    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+                    rs = gain / loss
+                    rsi = (100 - (100 / (1 + rs))).iloc[-1] if len(rs) > 0 else None
+                    
+                    return {
+                        'date': candles[-1].get('date'),
+                        'close': candles[-1].get('close'),
+                        'ma5': float(ma5) if ma5 and not pd.isna(ma5) else None,
+                        'ma20': float(ma20) if ma20 and not pd.isna(ma20) else None,
+                        'rsi': float(rsi) if rsi and not pd.isna(rsi) else None,
+                        'volume': candles[-1].get('volume')
+                    }
         except Exception as e:
             logger.error(f'富果取得 {stock_code} K線失敗: {e}')
         
