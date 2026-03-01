@@ -864,6 +864,21 @@ def api_backup_restore():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/test_fugle/<code>', methods=['GET'])
+def api_test_fugle(code):
+    """測試富果 API"""
+    try:
+        if not fugle or not fugle.stock_api:
+            return jsonify({'success': False, 'error': '富果 API 未初始化，請檢查 FUGLE_API_KEY 環境變數'})
+        
+        result = fugle.get_price_with_indicators(code)
+        if result:
+            return jsonify({'success': True, 'data': result})
+        return jsonify({'success': False, 'error': '無法取得報價'})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()})
+
 # ==================== Main ====================
 
 if __name__ == '__main__':

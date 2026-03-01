@@ -433,12 +433,15 @@ class FugleClient:
     def get_quote(self, stock_code: str) -> Optional[Dict]:
         """取得個股報價"""
         if not self.stock_api:
+            logger.warning('富果 API 未初始化')
             return None
         
         try:
             # 富果 API 需要去掉 .TW 後綴
             symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
+            logger.info(f'富果 API 查詢: {symbol_id}')
             quote = self.stock_api.get_quote(symbolId=symbol_id)
+            logger.info(f'富果 API 回應: {quote}')
             
             if quote:
                 return {
