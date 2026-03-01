@@ -7,3 +7,4 @@ requests>=2.28
 pandas>=2.0
 matplotlib>=3.5
 numpy>=1.24
+APScheduler>=3.10
