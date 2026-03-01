@@ -463,23 +463,25 @@ class FugleClient:
         if self.itick_key:
             try:
                 symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
-                url = f'https://api.itick.org/stock/{symbol_id}'
-                headers = {'token': self.itick_key}
-                resp = requests.get(url, headers=headers, timeout=10)
+                # 正確格式：/stock/quote?region=TW&code=2330
+                url = f'https://api.itick.org/stock/quote'
+                params = {'region': 'TW', 'code': symbol_id}
+                headers = {'token': self.itick_key, 'accept': 'application/json'}
+                resp = requests.get(url, params=params, headers=headers, timeout=10)
                 
                 if resp.status_code == 200:
                     data = resp.json()
                     if data.get('data'):
                         quote = data['data']
                         return {
-                            'current_price': quote.get('last'),
-                            'open': quote.get('open'),
-                            'high': quote.get('high'),
-                            'low': quote.get('low'),
-                            'volume': quote.get('volume'),
-                            'change': quote.get('change'),
-                            'change_pct': quote.get('chg_percent'),
-                            'name': quote.get('name', '')
+                            'current_price': quote.get('p') or quote.get('last'),
+                            'open': quote.get('o'),
+                            'high': quote.get('h'),
+                            'low': quote.get('l'),
+                            'volume': quote.get('v'),
+                            'change': quote.get('ch'),
+                            'change_pct': quote.get('chp'),
+                            'name': quote.get('s', '')
                         }
             except Exception as e:
                 logger.warning(f'iTick API 失敗: {e}')
