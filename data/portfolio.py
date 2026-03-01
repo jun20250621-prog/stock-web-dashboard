@@ -393,30 +393,66 @@ class PortfolioManager:
     def update_analysis(self, code: str, fetcher, fugle=None) -> Optional[Dict]:
         """更新股票分析資料（從 API 獲取）"""
         try:
-            # 優先使用 yfinance
-            price_data = fetcher.get_price(code)
-            hist_data = fetcher.get_historical(code, days=90)
+            # 嘗試從 API 取得股價
+            price_data = None
+            hist_data = None
             
-            # 如果 yfinance 失敗，嘗試富果
-            if not price_data or not price_data.get('current_price'):
-                if fugle:
-                    price_data = fugle.get_price_with_indicators(code)
-                    if price_data:
-                        print(f"使用富果 API 取得 {code} 報價成功")
+            try:
+                price_data = fetcher.get_price(code)
+                hist_data = fetcher.get_historical(code, days=90)
+            except Exception as e:
+                print(f"API 取得股價失敗: {e}")
             
-            if not price_data:
+            # 如果 API 失敗，使用資料庫現有資料
+            stock = self.get(code)
+            if not stock:
                 return None
             
-            current_price = price_data.get('current_price') or price_data.get('close')
+            current_price = None
+            change_pct = None
+            
+            if price_data and price_data.get('current_price'):
+                current_price = price_data.get('current_price')
+                change_pct = price_data.get('change_pct')
+            elif stock.get('current_price'):
+                # 使用資料庫現有股價
+                current_price = stock.get('current_price')
+                change_pct = stock.get('change_pct')
+            
             if not current_price:
-                return None
+                # 如果都沒有，嘗試從 yfinance 獲取
+                current_price = stock.get('current_price')
             
-            # 取得漲跌幅
-            change_pct = price_data.get('change_pct') or price_data.get('change') or price_data.get('changePercent')
+            # 技術指標
+            ma5 = None
+            ma20 = None
+            ma60 = None
+            rsi = None
+            volume = None
             
-            # 從歷史資料提取技術指標
-            ma5 = price_data.get('ma5') or (hist_data.get('ma5') if hist_data else None)
-            ma20 = price_data.get('ma20') or (hist_data.get('ma20') if hist_data else None)
+            if hist_data:
+                ma5 = hist_data.get('ma5')
+                ma20 = hist_data.get('ma20')
+                ma60 = hist_data.get('ma60')
+                rsi = hist_data.get('rsi')
+                volume = hist_data.get('volume')
+            
+            # 計算損益
+            if stock and current_price:
+                cost = stock.get('cost', 0)
+                shares = stock.get('shares', 0)
+                cost_total = cost * shares
+                current_total = current_price * shares
+                profit_loss = current_total - cost_total
+                profit_loss_pct = (profit_loss / cost_total * 100) if cost_total > 0 else 0
+            elif stock:
+                cost = stock.get('cost', 0)
+                shares = stock.get('shares', 0)
+                profit_loss = stock.get('profit_loss')
+                profit_loss_pct = stock.get('profit_loss_pct', 0)
+            else:
+                profit_loss = None
+                profit_loss_pct = None
             ma60 = price_data.get('ma60') or (hist_data.get('ma60') if hist_data else None)
             rsi = price_data.get('rsi') or (hist_data.get('rsi') if hist_data else None)
             volume = price_data.get('volume') or (hist_data.get('volume') if hist_data else None)
