@@ -278,11 +278,18 @@ class PortfolioManager:
     
     def update_price_and_analysis(self, code: str, price_data: Dict) -> None:
         """更新股價與分析資料"""
+        print(f"[DEBUG] update_price_and_analysis called for {code} with data: {price_data}")
+        
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
+        # 確保 code 格式一致
+        code = code.replace('.TW', '').replace('.TWO', '')
+        
         # 計算損益
         stock = self.get(code)
+        print(f"[DEBUG] stock from DB: {stock}")
+        
         if stock and price_data.get('current_price'):
             cost = stock.get('cost', 0)
             shares = stock.get('shares', 0)
@@ -291,9 +298,11 @@ class PortfolioManager:
             current_total = current_price * shares
             profit_loss = current_total - cost_total
             profit_loss_pct = (profit_loss / cost_total * 100) if cost_total > 0 else 0
+            print(f"[DEBUG] calculated: cost={cost}, shares={shares}, price={current_price}, PL={profit_loss}")
         else:
             profit_loss = None
             profit_loss_pct = None
+            print(f"[DEBUG] stock or price is None: stock={stock}, current_price={price_data.get('current_price')}")
         
         cursor.execute('''
             UPDATE portfolio SET 
