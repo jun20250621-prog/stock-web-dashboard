@@ -485,16 +485,6 @@ class FugleClient:
                 logger.warning(f'iTick API 失敗: {e}')
         
         return None
-                        'change_pct': quote.get('changePercent'),
-                        'name': quote.get('name', '')
-                    }
-            else:
-                logger.warning(f'富果 HTTP 请求失败: {resp.status_code} {resp.text}')
-        except Exception as e:
-            logger.error(f'富果 HTTP 请求异常: {e}')
-        
-        return None
-    
     def get_candles(self, stock_code: str, days: int = 90) -> Optional[Dict]:
         """取得 K 線資料"""
         try:
