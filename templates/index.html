@@ -62,6 +62,10 @@
             </ul>
         </div>
     </nav>
+    <!-- 訊息欄 -->
+    <div id="messageBar" class="alert alert-info d-none" role="alert">
+        <i class="fas fa-info-circle me-2"></i><span id="messageText"></span>
+    </div>
     <div class="container-fluid mt-4">
         <div class="summary-cards">
             <div class="summary-card"><div class="value" id="totalValue">...</div><div class="label">總市值</div></div>
@@ -210,6 +214,23 @@
 
     function loadAll(){ loadSchedule(); loadPortfolio(); loadWatchlist(); loadTrades(); loadAnalysis(); loadStockSelect(); }
     
+    // 訊息欄函數
+    function showMessage(text, type = 'info'){
+        const bar = document.getElementById('messageBar');
+        const txt = document.getElementById('messageText');
+        bar.className = 'alert alert-'+type;
+        txt.textContent = text;
+        bar.classList.remove('d-none');
+    }
+    
+    function hideMessage(){
+        document.getElementById('messageBar').classList.add('d-none');
+    }
+    
+    function showSuccess(text){ showMessage(text, 'success'); setTimeout(hideMessage, 3000); }
+    function showError(text){ showMessage(text, 'danger'); }
+    function showWarning(text){ showMessage(text, 'warning'); }
+    
     async function loadSchedule(){
         try{
             const resp = await fetch('/api/schedule');
@@ -354,11 +375,19 @@
     }
 
     async function analyzeAll(){
+        showMessage('正在分析所有持股...', 'info');
         try{
             const res = await fetch('/api/portfolio/analyze_all');
             const json = await res.json();
             if(json.success && json.data.length > 0){
-                document.getElementById('analyzeCode').textContent = '全部持股';
+                // 統計建議
+                const sellCount = json.data.filter(d => d.recommendation === 'sell').length;
+                const holdCount = json.data.filter(d => d.recommendation === 'hold').length;
+                const buyCount = json.data.filter(d => d.recommendation === 'buy').length;
+                
+                showMessage(`分析完成：${sellCount}檔建議賣出，${holdCount}檔建議續抱`, sellCount > 0 ? 'warning' : 'success');
+                
+                document.getElementById('analyzeCode').textContent = '全部持股 ('+json.data.length+'檔)';
                 let html = '<div class="table-responsive"><table class="table table-hover"><thead><tr><th>股票</th><th>現價</th><th>損益%</th><th>漲跌幅%</th><th>MA5</th><th>MA20</th><th>RSI</th><th>建議</th><th>原因</th></tr></thead><tbody>';
                 json.data.forEach(d => {
                     const recClass = d.recommendation === 'sell' ? 'text-danger' : d.recommendation === 'buy' ? 'text-success' : 'text-warning';
@@ -380,6 +409,7 @@
                 const modal = new bootstrap.Modal(document.getElementById('analyzeModal'));
                 modal.show();
             }else{
+                showError('無持股資料');
                 alert('無持股資料');
             }
         }catch(e){

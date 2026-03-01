@@ -341,16 +341,17 @@ class PortfolioManager:
         if not stock:
             return None
         
-        # 計算建議
-        profit_loss_pct = stock.get('profit_loss_pct', 0)
+        # 計算建議（處理 None 值）
+        profit_loss_pct = stock.get('profit_loss_pct') or 0
         stop_loss = stock.get('stop_loss')
         stop_profit = stock.get('stop_profit')
+        cost = stock.get('cost') or 0
         
         # 根據條件給出建議
         if profit_loss_pct <= -10:
             recommendation = 'sell'
             reason = '跌幅過大，建議停損'
-        elif stop_loss and profit_loss_pct <= ((stop_loss - stock.get('cost', 0)) / stock.get('cost', 1) * 100):
+        elif stop_loss and cost > 0 and profit_loss_pct <= ((stop_loss - cost) / cost * 100):
             recommendation = 'sell'
             reason = '觸及停損點'
         elif profit_loss_pct >= 15:
