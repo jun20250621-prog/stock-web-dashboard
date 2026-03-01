@@ -357,8 +357,46 @@ def api_portfolio_delete(code):
 def api_portfolio_analyze(code):
     """分析單一股票"""
     try:
-        # 先更新分析資料
-        pm.update_analysis(code, fetcher, fugle)
+        import requests
+        import os
+        
+        # 直接使用 iTick API 取得現價
+        itick_key = os.environ.get('ITICK_API_KEY', '')
+        url = 'https://api.itick.org/stock/quote'
+        params = {'region': 'TW', 'code': code.replace('.TW','')}
+        headers = {'token': itick_key, 'accept': 'application/json'}
+        
+        current_price = None
+        change_pct = None
+        
+        try:
+            resp = requests.get(url, params=params, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get('data'):
+                    quote = data['data']
+                    current_price = quote.get('p')
+                    change_pct = quote.get('chp')
+        except:
+            pass
+        
+        # 如果有取得現價，直接更新
+        if current_price:
+            stock = pm.get(code)
+            if stock:
+                cost = stock.get('cost', 0)
+                shares = stock.get('shares', 0)
+                profit_loss = (current_price - cost) * shares if cost > 0 else 0
+                profit_loss_pct = (profit_loss / (cost * shares) * 100) if cost * shares > 0 else 0
+                
+                pm.update_price_and_analysis(code, {
+                    'current_price': current_price,
+                    'price_updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    'profit_loss': profit_loss,
+                    'profit_loss_pct': profit_loss_pct,
+                    'change_pct': change_pct
+                })
+        
         analysis = pm.analyze_stock(code)
         if analysis:
             return jsonify({'success': True, 'data': analysis})
