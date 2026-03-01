@@ -64,8 +64,8 @@
         </div>
     </nav>
     <!-- 訊息欄 -->
-    <div class="container-fluid mt-2">
-        <div id="messageBar" class="alert alert-dismissible fade show d-none" role="alert">
+    <div class="container-fluid mt-2" style="position: sticky; top: 50px; z-index: 1000;">
+        <div id="messageBar" class="alert alert-dismissible fade show d-none shadow-lg" role="alert" style="margin-bottom: 10px;">
             <strong id="messageTitle"></strong> <span id="messageText"></span>
             <button type="button" class="btn-close" onclick="hideMessage()"></button>
         </div>
