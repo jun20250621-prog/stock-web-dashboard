@@ -989,17 +989,6 @@ def api_test_fugle(code):
     except Exception as e:
         import traceback
         return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}) 
-                    'source': 'fugle',
-                    'data': fugle_price
-                })
-        
-        return jsonify({'success': False, 'error': '無法取得報價'})
-    except Exception as e:
-        import traceback
-        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()})
-
-# ==================== Main ====================
-
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print("🚀 啟動網頁版儀表板...")
