@@ -406,6 +406,45 @@ def api_portfolio_update_all_prices():
         import traceback
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/portfolio/batch_update_price', methods=['POST'])
+def api_portfolio_batch_update_price():
+    """批量更新持股價格"""
+    try:
+        data = request.json
+        prices = data.get('prices', [])  # [{"code": "2330", "price": 1234}, ...]
+        
+        import json
+        results = []
+        for item in prices:
+            code = item.get('code')
+            price = item.get('price')
+            change_pct = item.get('change_pct', 0)
+            
+            if code and price:
+                # 直接更新資料庫
+                stock = pm.get(code)
+                if stock:
+                    # 計算損益
+                    cost = stock.get('cost', 0)
+                    shares = stock.get('shares', 0)
+                    profit_loss = (price - cost) * shares if cost > 0 else 0
+                    profit_loss_pct = (profit_loss / (cost * shares) * 100) if cost * shares > 0 else 0
+                    
+                    # 更新
+                    pm.update_price_and_analysis(code, {
+                        'current_price': price,
+                        'price_updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'profit_loss': profit_loss,
+                        'profit_loss_pct': profit_loss_pct,
+                        'change_pct': change_pct
+                    })
+                    results.append({'code': code, 'price': price, 'success': True})
+        
+        return jsonify({'success': True, 'updated': len(results), 'results': results})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/watchlist/add', methods=['POST'])
 def api_watchlist_add():
     try:
