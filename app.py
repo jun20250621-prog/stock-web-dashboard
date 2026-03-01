@@ -304,6 +304,8 @@ def api_portfolio_delete(code):
 def api_portfolio_analyze(code):
     """分析單一股票"""
     try:
+        # 先更新分析資料
+        pm.update_analysis(code, fetcher)
         analysis = pm.analyze_stock(code)
         if analysis:
             return jsonify({'success': True, 'data': analysis})
@@ -316,6 +318,8 @@ def api_portfolio_analyze(code):
 def api_portfolio_analyze_all():
     """分析所有持股"""
     try:
+        # 先更新所有持股的分析資料
+        pm.update_all_analysis(fetcher)
         portfolio = pm.get_all()
         results = []
         for code in portfolio:
@@ -323,6 +327,28 @@ def api_portfolio_analyze_all():
             if analysis:
                 results.append(analysis)
         return jsonify({'success': True, 'data': results})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/portfolio/update_price/<code>', methods=['POST'])
+def api_portfolio_update_price(code):
+    """更新單一股票價格"""
+    try:
+        result = pm.update_analysis(code, fetcher)
+        if result:
+            return jsonify({'success': True, 'data': result})
+        return jsonify({'success': False, 'error': '更新失敗'}), 404
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/portfolio/update_all_prices', methods=['POST'])
+def api_portfolio_update_all_prices():
+    """更新所有持股價格"""
+    try:
+        results = pm.update_all_analysis(fetcher)
+        return jsonify({'success': True, 'data': results, 'count': len(results)})
     except Exception as e:
         import traceback
         return jsonify({'success': False, 'error': str(e)}), 500

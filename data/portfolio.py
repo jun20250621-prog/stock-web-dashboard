@@ -388,3 +388,88 @@ class PortfolioManager:
             'recommendation': recommendation,
             'reason': reason
         }
+    
+    def update_analysis(self, code: str, fetcher) -> Optional[Dict]:
+        """更新股票分析資料（從 API 獲取）"""
+        try:
+            # 取得現價
+            price_data = fetcher.get_price(code)
+            # 取得歷史資料（計算技術指標）
+            hist_data = fetcher.get_historical(code, days=90)
+            
+            if not price_data:
+                return None
+            
+            current_price = price_data.get('current_price') or price_data.get('close')
+            if not current_price:
+                return None
+            
+            # 取得漲跌幅
+            change_pct = price_data.get('change_pct') or price_data.get('change')
+            
+            # 從歷史資料提取技術指標
+            ma5 = hist_data.get('ma5') if hist_data else None
+            ma20 = hist_data.get('ma20') if hist_data else None
+            ma60 = hist_data.get('ma60') if hist_data else None
+            rsi = hist_data.get('rsi') if hist_data else None
+            volume = hist_data.get('volume') if hist_data else None
+            
+            # 計算損益
+            stock = self.get(code)
+            if stock:
+                cost = stock.get('cost', 0)
+                shares = stock.get('shares', 0)
+                cost_total = cost * shares
+                current_total = current_price * shares
+                profit_loss = current_total - cost_total
+                profit_loss_pct = (profit_loss / cost_total * 100) if cost_total > 0 else 0
+            else:
+                profit_loss = None
+                profit_loss_pct = None
+            
+            # 更新資料庫
+            price_update = {
+                'current_price': current_price,
+                'price_updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'profit_loss': profit_loss,
+                'profit_loss_pct': profit_loss_pct,
+                'change_pct': change_pct,
+                'ma5': ma5,
+                'ma20': ma20,
+                'ma60': ma60,
+                'rsi': rsi,
+                'volume': volume,
+                'pe_ratio': None,
+                'eps': None,
+                'dividend_yield': None,
+                'analyst_target': None,
+                'notes': ''
+            }
+            
+            self.update_price_and_analysis(code, price_update)
+            
+            return {
+                'code': code,
+                'current_price': current_price,
+                'change_pct': change_pct,
+                'ma5': ma5,
+                'ma20': ma20,
+                'ma60': ma60,
+                'rsi': rsi,
+                'volume': volume,
+                'profit_loss': profit_loss,
+                'profit_loss_pct': profit_loss_pct
+            }
+        except Exception as e:
+            print(f"更新 {code} 分析資料失敗: {e}")
+            return None
+    
+    def update_all_analysis(self, fetcher) -> List[Dict]:
+        """更新所有持股的分析資料"""
+        portfolio = self.get_all()
+        results = []
+        for code in portfolio:
+            result = self.update_analysis(code, fetcher)
+            if result:
+                results.append(result)
+        return results
