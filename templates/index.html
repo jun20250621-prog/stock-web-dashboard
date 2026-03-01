@@ -334,14 +334,28 @@
         try{
             // 先呼叫更新所有股價API
             showInfo('持股載入', '正在更新股價...');
+            let updateMsg = '';
             try{
-                await fetch('/api/portfolio/update_all_prices', {method: 'POST'});
+                const updateRes = await fetch('/api/portfolio/update_all_prices', {method: 'POST'});
+                const updateData = await updateRes.json();
+                if(updateData.success && updateData.count > 0){
+                    updateMsg = `已更新 ${updateData.count} 檔`;
+                }else{
+                    updateMsg = '無更新';
+                }
             }catch(e){
+                updateMsg = '更新失敗';
                 console.log('更新股價失敗', e);
             }
             
             const resp = await fetch('/api/portfolio?t=' + Date.now());
             portfolioData = await resp.json();
+            
+            // 顯示更新結果
+            if(updateMsg){
+                showSuccess('股價更新', updateMsg);
+            }
+            
             let html = ''; let totalValue = 0, totalCost = 0;
             portfolioData.forEach(s => {
                 totalValue += (s.current_price||0)*(s.shares||1000); totalCost += (s.cost||0)*(s.shares||1000);
