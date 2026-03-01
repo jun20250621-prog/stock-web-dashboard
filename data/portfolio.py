@@ -391,120 +391,91 @@ class PortfolioManager:
         }
     
     def update_analysis(self, code: str, fetcher, fugle=None) -> Optional[Dict]:
-        """更新股票分析資料（從 API 獲取）"""
+        """更新股票分析資料"""
         try:
-            # 嘗試從 API 取得股價
-            price_data = None
-            hist_data = None
-            
-            try:
-                price_data = fetcher.get_price(code)
-                hist_data = fetcher.get_historical(code, days=90)
-            except Exception as e:
-                print(f"API 取得股價失敗: {e}")
-            
-            # 如果 API 失敗，使用資料庫現有資料
+            # 取得資料庫中的持股資料
             stock = self.get(code)
             if not stock:
                 return None
             
-            current_price = None
-            change_pct = None
+            # 優先使用 API 資料，若失敗則使用資料庫現有資料
+            current_price = stock.get('current_price') or 0
+            change_pct = stock.get('change_pct') or 0
             
-            if price_data and price_data.get('current_price'):
-                current_price = price_data.get('current_price')
-                change_pct = price_data.get('change_pct')
-            elif stock.get('current_price'):
-                # 使用資料庫現有股價
-                current_price = stock.get('current_price')
-                change_pct = stock.get('change_pct')
+            # 嘗試從 API 取得最新股價
+            try:
+                price_data = fetcher.get_price(code)
+                if price_data and price_data.get('current_price'):
+                    current_price = price_data.get('current_price')
+                    change_pct = price_data.get('change_pct', 0)
+            except Exception as e:
+                print(f"API 取得股價失敗: {e}")
             
-            if not current_price:
-                # 如果都沒有，嘗試從 yfinance 獲取
-                current_price = stock.get('current_price')
-            
-            # 技術指標
+            # 技術指標（需要 API，若無則為空）
             ma5 = None
             ma20 = None
             ma60 = None
             rsi = None
             volume = None
             
-            if hist_data:
-                ma5 = hist_data.get('ma5')
-                ma20 = hist_data.get('ma20')
-                ma60 = hist_data.get('ma60')
-                rsi = hist_data.get('rsi')
-                volume = hist_data.get('volume')
-            
             # 計算損益
-            if stock and current_price:
-                cost = stock.get('cost', 0)
-                shares = stock.get('shares', 0)
-                cost_total = cost * shares
-                current_total = current_price * shares
-                profit_loss = current_total - cost_total
-                profit_loss_pct = (profit_loss / cost_total * 100) if cost_total > 0 else 0
-            elif stock:
-                cost = stock.get('cost', 0)
-                shares = stock.get('shares', 0)
-                profit_loss = stock.get('profit_loss')
-                profit_loss_pct = stock.get('profit_loss_pct', 0)
-            else:
-                profit_loss = None
-                profit_loss_pct = None
-            ma60 = price_data.get('ma60') or (hist_data.get('ma60') if hist_data else None)
-            rsi = price_data.get('rsi') or (hist_data.get('rsi') if hist_data else None)
-            volume = price_data.get('volume') or (hist_data.get('volume') if hist_data else None)
+            cost = stock.get('cost') or 0
+            shares = stock.get('shares') or 0
             
-            # 計算損益
-            stock = self.get(code)
-            if stock:
-                cost = stock.get('cost', 0)
-                shares = stock.get('shares', 0)
+            if current_price and cost > 0:
                 cost_total = cost * shares
                 current_total = current_price * shares
                 profit_loss = current_total - cost_total
                 profit_loss_pct = (profit_loss / cost_total * 100) if cost_total > 0 else 0
             else:
-                profit_loss = None
-                profit_loss_pct = None
+                profit_loss = stock.get('profit_loss') or 0
+                profit_loss_pct = stock.get('profit_loss_pct') or 0
             
-            # 更新資料庫
-            price_update = {
-                'current_price': current_price,
-                'price_updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            # 根據損益給出建議
+            if profit_loss_pct <= -10:
+                recommendation = 'sell'
+                reason = '跌幅過大，建議停損'
+            elif profit_loss_pct <= -5:
+                recommendation = 'sell'
+                reason = '接近停損點'
+            elif profit_loss_pct >= 15:
+                recommendation = 'sell'
+                reason = '已達目標價，可考慮停利'
+            elif profit_loss_pct >= 8:
+                recommendation = 'hold'
+                reason = '達到初步目標，續抱'
+            else:
+                recommendation = 'hold'
+                reason = '續抱，等待行情'
+            
+            # 返回分析結果
+            return {
+                'code': code,
+                'name': stock.get('name'),
+                'cost': cost,
+                'shares': shares,
+                'current_price': current_price if current_price > 0 else stock.get('current_price'),
                 'profit_loss': profit_loss,
                 'profit_loss_pct': profit_loss_pct,
                 'change_pct': change_pct,
+                'stop_loss': stock.get('stop_loss'),
+                'stop_profit': stock.get('stop_profit'),
+                'industry': stock.get('industry'),
+                'application': stock.get('application'),
                 'ma5': ma5,
                 'ma20': ma20,
-                'ma60': ma60,
                 'rsi': rsi,
                 'volume': volume,
-                'pe_ratio': None,
-                'eps': None,
-                'dividend_yield': None,
-                'analyst_target': None,
-                'notes': ''
-            }
-            
-            self.update_price_and_analysis(code, price_update)
-            
-            return {
-                'code': code,
-                'current_price': current_price,
-                'change_pct': change_pct,
-                'ma5': ma5,
-                'ma20': ma20,
-                'ma60': ma60,
-                'rsi': rsi,
-                'volume': volume,
-                'profit_loss': profit_loss,
-                'profit_loss_pct': profit_loss_pct
+                'pe_ratio': stock.get('pe_ratio'),
+                'eps': stock.get('eps'),
+                'dividend_yield': stock.get('dividend_yield'),
+                'analyst_target': stock.get('analyst_target'),
+                'notes': stock.get('notes'),
+                'recommendation': recommendation,
+                'reason': reason
             }
         except Exception as e:
-            print(f"更新 {code} 分析資料失敗: {e}")
+            print(f"分析 {code} 失敗: {e}")
             return None
     
     def update_all_analysis(self, fetcher, fugle=None) -> List[Dict]:
