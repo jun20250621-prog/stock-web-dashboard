@@ -410,6 +410,7 @@ class FugleClient:
     def __init__(self, api_key: str = None):
         """初始化富果客戶端"""
         self.api_key = api_key or os.environ.get('FUGLE_API_KEY', '')
+        self.itick_key = os.environ.get('ITICK_API_KEY', '')
         self.base_url = 'https://api.fugle.tw/marketdata/v1.0'
         self.stock_api = None
         self._init_client()
@@ -432,9 +433,10 @@ class FugleClient:
     
     def get_quote(self, stock_code: str) -> Optional[Dict]:
         """取得個股報價"""
-        # 使用 HTTP 直接請求富果 API
+        import requests
+        
+        # 嘗試富果 API
         try:
-            import requests
             symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
             url = f'https://api.fugle.tw/marketdata/v1.0/stock/quotes/{symbol_id}'
             headers = {'api-key': self.api_key}
@@ -451,6 +453,38 @@ class FugleClient:
                         'low': quote.get('low'),
                         'volume': quote.get('volume'),
                         'change': quote.get('change'),
+                        'change_pct': quote.get('changePercent'),
+                        'name': quote.get('name', '')
+                    }
+        except Exception as e:
+            logger.warning(f'富果 API 失敗: {e}')
+        
+        # 嘗試 iTick API
+        if self.itick_key:
+            try:
+                symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
+                url = f'https://api.itick.org/stock/{symbol_id}'
+                headers = {'token': self.itick_key}
+                resp = requests.get(url, headers=headers, timeout=10)
+                
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get('data'):
+                        quote = data['data']
+                        return {
+                            'current_price': quote.get('last'),
+                            'open': quote.get('open'),
+                            'high': quote.get('high'),
+                            'low': quote.get('low'),
+                            'volume': quote.get('volume'),
+                            'change': quote.get('change'),
+                            'change_pct': quote.get('chg_percent'),
+                            'name': quote.get('name', '')
+                        }
+            except Exception as e:
+                logger.warning(f'iTick API 失敗: {e}')
+        
+        return None
                         'change_pct': quote.get('changePercent'),
                         'name': quote.get('name', '')
                     }
@@ -539,3 +573,39 @@ class FugleClient:
             })
         
         return result
+
+
+# ==================== 台灣證交所 API ====================
+class TWSEClient:
+    """台灣證券交易所 API"""
+    
+    def __init__(self):
+        self.base_url = 'https://www.twse.com.tw'
+    
+    def get_price(self, stock_code: str) -> Optional[Dict]:
+        """取得個股報價（上市）"""
+        try:
+            import requests
+            # 嘗試上市股價
+            url = f'{self.base_url}/rwd/zh/afterTrading/STOCK_DAY_AVG?date={datetime.now().strftime("%Y%m%d")}&stockNo={stock_code}'
+            resp = requests.get(url, timeout=10)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get('data'):
+                    # 解析最新股價
+                    return None  # 這個 API 是歷史資料，需要用另一個
+        except Exception as e:
+            logger.error(f"證交所 API 錯誤: {e}")
+        return None
+    
+    def get_realtime_price(self, stock_code: str) -> Optional[Dict]:
+        """取得即時股價（上市）"""
+        try:
+            import requests
+            # 取得個股最新成交價
+            url = f'{self.base_url}/rwd/zh/fund/T86?date={datetime.now().strftime("%Y%m%d")}&stockNo={stock_code}&response=json'
+            # 這個 API 需要登入，先用簡單的方法
+        except:
+            pass
+        return None
