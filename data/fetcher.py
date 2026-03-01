@@ -426,14 +426,41 @@ class FugleClient:
             self.stock_api = self.client.stock
             logger.info('富果 API 初始化成功')
         except ImportError:
-            logger.warning('fugle-marketdata 未安裝')
+            logger.warning('fugle-marketdata 未安裝，請執行 pip install fugle-marketdata')
         except Exception as e:
             logger.error(f'富果 API 初始化失敗: {e}')
     
     def get_quote(self, stock_code: str) -> Optional[Dict]:
         """取得個股報價"""
+        # 優先嘗試 HTTP 直接請求（不依賴 SDK）
+        try:
+            import requests
+            symbol_id = stock_code.replace('.TW', '').replace('.TWO', '')
+            url = f'https://api.fugle.tw/marketdata/v1.0/stock/quote?symbolId={symbol_id}'
+            headers = {'api-key': self.api_key}
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get('data'):
+                    quote = data['data']
+                    return {
+                        'current_price': quote.get('close'),
+                        'open': quote.get('open'),
+                        'high': quote.get('high'),
+                        'low': quote.get('low'),
+                        'volume': quote.get('volume'),
+                        'change': quote.get('change'),
+                        'change_pct': quote.get('changePercent'),
+                        'name': quote.get('name', '')
+                    }
+            else:
+                logger.warning(f'富果 HTTP 请求失败: {resp.status_code} {resp.text}')
+        except Exception as e:
+            logger.error(f'富果 HTTP 请求异常: {e}')
+        
+        # SDK 備用
         if not self.stock_api:
-            logger.warning('富果 API 未初始化')
+            logger.warning('富果 API 未初始化，api_key: '+str(self.api_key[:10] if self.api_key else 'None')+'...')
             return None
         
         try:
@@ -454,6 +481,8 @@ class FugleClient:
                     'change_pct': quote.get('changePercent'),
                     'name': quote.get('name', '')
                 }
+            else:
+                logger.warning(f'富果 API 回應空值 for {symbol_id}')
         except Exception as e:
             logger.error(f'富果取得 {stock_code} 報價失敗: {e}')
         

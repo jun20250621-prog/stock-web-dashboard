@@ -868,13 +868,22 @@ def api_backup_restore():
 def api_test_fugle(code):
     """測試富果 API"""
     try:
+        # 檢查 API Key 狀態
+        fugle_key = os.environ.get('FUGLE_API_KEY', 'NOT_SET')
+        key_status = '已設定' if fugle_key != 'NOT_SET' and fugle_key else '未設定'
+        
         if not fugle or not fugle.stock_api:
-            return jsonify({'success': False, 'error': '富果 API 未初始化，請檢查 FUGLE_API_KEY 環境變數'})
+            return jsonify({
+                'success': False, 
+                'error': '富果 API 未初始化',
+                'key_status': key_status,
+                'fugle_api_key': fugle_key[:10]+'...' if fugle_key and len(fugle_key) > 10 else fugle_key
+            })
         
         result = fugle.get_price_with_indicators(code)
         if result:
-            return jsonify({'success': True, 'data': result})
-        return jsonify({'success': False, 'error': '無法取得報價'})
+            return jsonify({'success': True, 'data': result, 'key_status': key_status})
+        return jsonify({'success': False, 'error': '無法取得報價', 'key_status': key_status})
     except Exception as e:
         import traceback
         return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()})
