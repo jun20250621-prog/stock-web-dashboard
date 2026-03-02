@@ -18,6 +18,7 @@
         .price-up { color: var(--danger); }
         .price-down { color: var(--success); }
         .price-updated { color: #0066ff; font-weight: bold; }
+        #portfolioTable tbody tr:hover { background-color: #e8f4ff; }
         .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .summary-card { background: white; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .summary-card .value { font-size: 1.6em; font-weight: bold; }
@@ -374,7 +375,8 @@
                 // 判斷是否有收盤價，用藍色標示
                 const priceClass = s.current_price > 0 ? 'price-updated' : '';
                 const priceDisplay = s.current_price > 0 ? s.current_price : (s.cost > 0 ? '-' : '-');
-                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.shares||'-'}</td><td>${s.cost||'-'}</td><td class="${priceClass}">${priceDisplay}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.stop_loss||'-'}</td><td>${s.stop_profit||'-'}</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-info me-1" onclick='analyzeStock("${s.code}")'><i class="fas fa-chart-line"></i></button><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                // 新增點擊整列更新收盤價功能
+                html += `<tr onclick="updateStockPrice('${s.code}')" style="cursor:pointer" title="點擊更新收盤價"><td><b>${s.code}</b> ${s.name||''}</td><td>${s.shares||'-'}</td><td>${s.cost||'-'}</td><td class="${priceClass}">${priceDisplay}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.stop_loss||'-'}</td><td>${s.stop_profit||'-'}</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-info me-1" onclick='analyzeStock("${s.code}")'><i class="fas fa-chart-line"></i></button><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
             document.querySelector('#portfolioTable tbody').innerHTML = html || '<tr><td colspan="13" class="text-center">無持股資料</td></tr>';
             const totalPL = totalValue-totalCost, totalPLPct = totalCost>0?totalPL/totalCost*100:0;
@@ -403,6 +405,24 @@
             modal.hide(); loadPortfolio();
         };
 
+    // 點擊持股列更新收盤價
+    async function updateStockPrice(code){
+        showInfo('更新收盤價', '正在取得 '+code+' 的收盤價...');
+        try{
+            const res = await fetch('/api/portfolio/update_price/'+code, {method: 'POST'});
+            const json = await res.json();
+            if(json.success && json.data){
+                const data = json.data;
+                showSuccess('收盤價更新', `${code} ${data.current_price}元 (${(data.profit_loss_pct||0)>=0?'+':''}${(data.profit_loss_pct||0).toFixed(2)}%)`);
+                loadPortfolio();
+            }else{
+                showError('更新失敗', json.error || '無法取得收盤價');
+            }
+        }catch(e){
+            showError('更新失敗', e.message);
+        }
+    }
+    
     async function analyzeStock(code){
         log('info', '分析', '開始分析股票: '+code);
         document.getElementById('analyzeCode').textContent = code;
