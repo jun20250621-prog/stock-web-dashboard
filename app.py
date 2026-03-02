@@ -772,6 +772,7 @@ def api_export_portfolio():
     data = []
     for code, stock in portfolio.items():
         data.append({
+            'ID': stock.get('id', ''),
             '股票代碼': code,
             '股票名稱': stock.get('name', ''),
             '成本價': stock.get('cost', 0),
@@ -782,7 +783,7 @@ def api_export_portfolio():
             '應用': stock.get('application', ''),
             '買入日期': stock.get('buy_date', '')
         })
-    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '成本價', '股數', '停損價', '停利價', '產業', '應用', '買入日期'], f'持股_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.xlsx'))
+    return jsonify(create_excel(data, ['ID', '股票代碼', '股票名稱', '成本價', '股數', '停損價', '停利價', '產業', '應用', '買入日期'], f'持股_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.xlsx'))
 
 @app.route('/api/import/portfolio', methods=['POST'])
 def api_import_portfolio():
@@ -798,7 +799,7 @@ def api_import_portfolio():
         df = pd.read_excel(io.BytesIO(excel_data))
         
         col_map = {
-            'code': ['股票代碼', 'code', 'Code', '代碼'],
+            'ID': ['ID', 'id', 'Id'], 'code': ['股票代碼', 'code', 'Code', '代碼'],
             'name': ['股票名稱', 'name', 'Name', '名稱'],
             'cost': ['成本價', 'cost', 'Cost'],
             'shares': ['股數', 'shares', 'Shares', '數量'],
@@ -857,6 +858,7 @@ def api_export_trades():
         strategy_id = t.get('entry_strategy_id', '')
         strategy_name = strategy_names.get(strategy_id, strategy_id)
         data.append({
+            'ID': t.get('id', ''),
             '股票代碼': t.get('code', ''),
             '股票名稱': t.get('name', ''),
             '買入日期': t.get('buy_date', ''),
@@ -870,7 +872,7 @@ def api_export_trades():
             '紀律': t.get('discipline', ''),
             '策略': strategy_name
         })
-    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '買入日期', '買入價格', '賣出日期', '賣出價格', '股數', '損益', '損益率', '結果', '紀律', '策略'], f'交易紀錄_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.xlsx'))
+    return jsonify(create_excel(data, ['ID', '股票代碼', '股票名稱', '買入日期', '買入價格', '賣出日期', '賣出價格', '股數', '損益', '損益率', '結果', '紀律', '策略'], f'交易紀錄_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.xlsx'))
 
 @app.route('/api/export/watchlist')
 def api_export_watchlist():
@@ -879,6 +881,7 @@ def api_export_watchlist():
     data = []
     for w in watchlist:
         data.append({
+            'ID': w.get('id', ''),
             '股票代碼': w.get('code', ''),
             '股票名稱': w.get('name', ''),
             '目標價': w.get('target_price', ''),
@@ -886,7 +889,7 @@ def api_export_watchlist():
             '產業': w.get('industry', ''),
             '新增日期': w.get('add_date', '')
         })
-    return jsonify(create_excel(data, ['股票代碼', '股票名稱', '目標價', '追蹤原因', '產業', '新增日期'], f'觀察名單_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.xlsx'))
+    return jsonify(create_excel(data, ['ID', '股票代碼', '股票名稱', '目標價', '追蹤原因', '產業', '新增日期'], f'觀察名單_{now_taiwan().strftime("%Y%m%d_%H%M%S")}.xlsx'))
 
 @app.route('/api/import/trades', methods=['POST'])
 def api_import_trades():
@@ -904,7 +907,7 @@ def api_import_trades():
         
         # 支援的中文/英文欄位名稱映射
         col_map = {
-            'code': ['股票代碼', 'code', 'Code', '代碼'],
+            'ID': ['ID', 'id', 'Id'], 'code': ['股票代碼', 'code', 'Code', '代碼'],
             'name': ['股票名稱', 'name', 'Name', '名稱'],
             'buy_date': ['買入日期', 'buy_date', 'Buy Date', '買日'],
             'buy_price': ['買入價格', 'buy_price', 'Buy Price', '買價'],
@@ -970,7 +973,7 @@ def api_import_watchlist():
         
         # 支援的中文/英文欄位名稱映射
         col_map = {
-            'code': ['股票代碼', 'code', 'Code', '代碼'],
+            'ID': ['ID', 'id', 'Id'], 'code': ['股票代碼', 'code', 'Code', '代碼'],
             'name': ['股票名稱', 'name', 'Name', '名稱'],
             'target_price': ['目標價', 'target_price', 'Target Price', '目標'],
             'reason': ['追蹤原因', 'reason', 'Reason', '原因'],
