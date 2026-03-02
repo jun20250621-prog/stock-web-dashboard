@@ -46,7 +46,6 @@ def reload_config():
     load_config()
     # 重新初始化管理器（更新全域變數）
     pm = PortfolioManager(config)
-    pm.migrate_remove_unique()  # 移除非必要約束
     wm = WatchlistManager(config)
     tj = TradeJournal(config)
 
@@ -65,7 +64,6 @@ screener = TaiwanStockScreener()
 fugle_api_key = os.environ.get('FUGLE_API_KEY', config.get('fugle_api_key', ''))
 fugle = FugleClient(fugle_api_key) if fugle_api_key else None
 pm = PortfolioManager(config)
-    pm.migrate_remove_unique()  # 移除非必要約束
 wm = WatchlistManager(config)
 tj = TradeJournal(config)
 sl = StrategyLibrary(config)
