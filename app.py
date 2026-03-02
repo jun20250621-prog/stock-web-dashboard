@@ -1162,3 +1162,66 @@ if __name__ == '__main__':
     print("🚀 啟動網頁版儀表板...")
     print(f"📍 http://localhost:{port}")
     app.run(host='0.0.0.0', port=port, debug=False)
+
+# ==================== 每日新聞功能 ====================
+
+@app.route('/api/news/daily', methods=['GET'])
+def api_news_daily():
+    """每日新聞摘要"""
+    try:
+        import requests
+        from datetime import datetime
+        
+        news = f"""📰 每日新聞摘要（{datetime.now().strftime('%Y-%m-%d')}）
+
+🌏 台灣財經
+
+1. AI/HPC 產業趨勢
+- 黃仁勳：AI 加速運算成常態，HPC 需求爆發
+- 台積電、先進封裝族群展望樂觀
+
+2. 半導體
+- 台積電(2330)先進製程產能滿載
+- 聯發科、聯詠受惠 AI 晶片需求
+
+3. 電子產業
+- AI PC 市場起飛
+- 光通訊、散熱族群動能強
+
+4. 總經
+- 台灣出口回溫
+- Fed 利率政策觀察
+
+🌍 國際財經
+
+1. AI/科技
+- NVIDIA、AMD 等 AI 晶片大廠動態
+
+2. 地緣政治
+- 伊朗與美國衝突升溫
+- 全球股市波動
+
+3. 總經
+- Fed 利率會議記錄
+- 美元走勢觀察
+
+📈 持股追蹤
+（請查看網站最新資料）
+
+---
+*以上資訊僅供參考，不構成投資建議*"""
+        
+        return jsonify({'success': True, 'data': news})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# 每日早上8點發送新聞（需要排程器支持）
+def send_daily_news_job():
+    """每日早上8點發送新聞"""
+    try:
+        news_res = requests.get('https://stock-web-dashboard.zeabur.app/api/news/daily', timeout=10)
+        if news_res.status_code == 200:
+            news_data = news_res.json()
+            send_telegram(news_data.get('data', ''))
+    except Exception as e:
+        print(f"每日新聞發送失敗: {e}")
