@@ -631,3 +631,27 @@ class PortfolioManager:
             pass
         conn.commit()
         conn.close()
+
+    def migrate_fix_unique(self):
+        """修復資料庫：移除 UNIQUE 約束"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            # 嘗試刪除舊的 UNIQUE 索引
+            cursor.execute("DROP INDEX IF EXISTS idx_code")
+        except:
+            pass
+        try:
+            # 建立新的非 UNIQUE 索引
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_code ON portfolio(code)")
+        except:
+            pass
+        conn.commit()
+        conn.close()
+        
+# 模組載入時自動執行遷移
+try:
+    _pm = PortfolioManager({})
+    _pm.migrate_fix_unique()
+except:
+    pass
