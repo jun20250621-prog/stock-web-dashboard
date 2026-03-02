@@ -55,7 +55,7 @@
     <nav class="navbar navbar-dark navbar-expand-lg">
         <div class="container-fluid">
             <a class="navbar-brand" href="javascript:location.reload()">
-                <i class="fas fa-chart-line me-2"></i>台股智能分析系統 <span class="badge bg-warning text-dark">v1.10</span>
+                <i class="fas fa-chart-line me-2"></i>台股智能分析系統 <span class="badge bg-warning text-dark">v1.11</span>
             </a>
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="javascript:loadAll()"><i class="fas fa-sync-alt me-1"></i>重新整理</a></li>
@@ -405,35 +405,57 @@
             modal.hide(); loadPortfolio();
         };
 
-    // 點擊持股列更新收盤價
+    // 點擊持股列顯示詳細資訊
     async function updateStockPrice(code){
-        showInfo('更新收盤價', '正在更新 '+code+' 的收盤價...');
-        log('info', '更新', `開始更新 ${code} 收盤價`);
+        // 取得持股資料
+        const portfolio = await fetch('/api/portfolio').then(r => r.json());
+        const stock = portfolio.find(s => s.code === code);
         
+        if (!stock) {
+            showError('錯誤', '找不到持股資料');
+            return;
+        }
+        
+        // 組成詳細訊息
+        const detailMsg = `📊 ${stock.name} (${stock.code})
+💰 成本: ${stock.cost}
+💵 現價: ${stock.current_price}
+📈 漲跌幅: ${stock.change_pct}
+💵 損益: ${stock.profit_loss} (${stock.profit_loss_pct}%)
+🎯 停損: ${stock.stop_loss} | 停利: ${stock.stop_profit}
+🏷️ 產業: ${stock.industry}
+📝 應用: ${stock.application}`;
+        
+        // 顯示訊息
+        showInfo('持股資訊', detailMsg.replace(/\n/g, '<br>'));
+        log('info', '持股', `${code} 詳細資訊已顯示`);
+        
+        // 發送到 Telegram
+        try {
+            const res = await fetch('/api/telegram/send', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: detailMsg})
+            });
+            const json = await res.json();
+            if(json.success){
+                log('info', 'Telegram', '已發送');
+            } else {
+                log('warn', 'Telegram', '發送失敗: ' + json.error);
+            }
+        } catch(e) {
+            log('error', 'Telegram', '發送錯誤: ' + e.message);
+        }
+        
+        // 同時更新收盤價（背景進行）
         try{
-            // 使用 update_all_prices 來更新
-            log('info', 'API', '呼叫 update_all_prices');
             const res = await fetch('/api/portfolio/update_all_prices', {method: 'POST'});
             const json = await res.json();
-            log('info', 'API', `回應: ${JSON.stringify(json).substring(0, 200)}`);
-            
-            if(json.success && json.data){
-                const stockData = json.data.find(x => x.code === code);
-                if(stockData && stockData.success){
-                    log('info', '更新', `${code} 更新成功: ${stockData.price}`);
-                    showSuccess('收盤價更新', `${code} ${stockData.price}元`);
-                }else{
-                    log('warn', '更新', `${code} 更新失敗`);
-                    showWarning('收盤價更新', `${code} 無法取得收盤價`);
-                }
-            }else{
-                log('error', 'API', '回應失敗');
-                showError('更新失敗', 'API 回應失敗');
+            if(json.success){
+                loadPortfolio(); // 重新載入持股資料
             }
-            loadPortfolio();
         }catch(e){
-            log('error', '更新', `錯誤: ${e.message}`);
-            showError('更新失敗', e.message);
+            console.log('更新收盤價失敗:', e);
         }
     }
     
