@@ -596,6 +596,7 @@ def api_portfolio_update_all_prices():
             except:
                 pass
         
+        reload_config()
         return jsonify({'success': True, 'data': results, 'count': len(results)})
     except Exception as e:
         import traceback
