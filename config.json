@@ -1,0 +1,26 @@
+{
+  "portfolio": {
+    "2331": {"name": "精英", "cost": 27.4, "shares": 1000, "stop_loss": 24, "stop_profit": 35},
+    "5392": {"name": "能率", "cost": 52.6, "shares": 1000, "stop_loss": 47, "stop_profit": 65},
+    "3287": {"name": "廣寰科", "cost": 29.9, "shares": 1000, "stop_loss": 25.5, "stop_profit": 39},
+    "2317": {"name": "鴻海", "cost": 224, "shares": 1000},
+    "00687B": {"name": "國泰20年美債", "cost": 29.35, "shares": 1000},
+    "1773": {"name": "勝一", "cost": 147, "shares": 1000}
+  },
+  "watchlist": [
+    {"code": "2543", "name": "皇昌"},
+    {"code": "3380", "name": "明泰"},
+    {"code": "2049", "name": "上銀"},
+    {"code": "6425", "name": "易發"},
+    {"code": "2485", "name": "兆赫"},
+    {"code": "6443", "name": "元晶"}
+  ],
+  "telegram": {"bot_token": "8294937993:AAFOY_rwU33p6ndhFrnDyjKFrSQ-_1KavOE", "chat_id": "8137433836"},
+  "schedule": {
+    "morning": "08:30",
+    "monitor": "09:30,10:30,11:30,13:00,14:00",
+    "evening": "15:00"
+  },
+  "alert": {"gain_threshold": 10, "loss_threshold": 5},
+  "itick_api_key": "ae7824e15cc34160bfe303310973ea9a77ee3c6b1c314202b2ff1bd23db02729"
+}
