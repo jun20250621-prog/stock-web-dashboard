@@ -114,7 +114,7 @@ def api_watchlist():
     try:
         watchlist = wm.get_all()
         stocks = []
-        for item in watchlist:
+        for idx, item in enumerate(watchlist, 1):
             code = item.get('code')
             # 使用與 portfolio 相同的價格取得邏輯
             price_data = screener.get_daily_price(code, 5)
@@ -128,6 +128,7 @@ def api_watchlist():
                 change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
             
             stocks.append({
+                'id': idx,
                 'code': code,
                 'name': item.get('name'),
                 'current_price': current_price,
