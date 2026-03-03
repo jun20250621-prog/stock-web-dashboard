@@ -177,8 +177,16 @@ def import_portfolio():
             return jsonify({'success': False, 'error': '無資料'})
         
         import base64
-        json_str = base64.b64decode(data).decode('utf-8')
-        portfolio = json.loads(json_str)
+        try:
+            json_str = base64.b64decode(data).decode('utf-8')
+        except:
+            # 嘗試直接解碼（如果已經是 JSON 字串）
+            json_str = data
+        
+        try:
+            portfolio = json.loads(json_str)
+        except:
+            return jsonify({'success': False, 'error': '資料格式錯誤，請確認匯出格式正確'})
         
         config['portfolio'] = portfolio
         with open('config.json', 'w', encoding='utf-8') as f:
@@ -197,9 +205,12 @@ def import_watchlist():
             return jsonify({'success': False, 'error': '無資料'})
         
         import base64
-        json_str = base64.b64decode(data).decode('utf-8')
-        watchlist = json.loads(json_str)
+        try:
+            json_str = base64.b64decode(data).decode('utf-8')
+        except:
+            json_str = data
         
+        watchlist = json.loads(json_str)
         config['watchlist'] = watchlist
         with open('config.json', 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
@@ -217,9 +228,12 @@ def import_trades():
             return jsonify({'success': False, 'error': '無資料'})
         
         import base64
-        json_str = base64.b64decode(data).decode('utf-8')
-        trades = json.loads(json_str)
+        try:
+            json_str = base64.b64decode(data).decode('utf-8')
+        except:
+            json_str = data
         
+        trades = json.loads(json_str)
         config['trades'] = trades
         with open('config.json', 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
