@@ -545,7 +545,7 @@ def api_portfolio_update_all_prices():
         
         portfolio = pm.get_all()
         results = []
-        itick_key = os.environ.get('ITICK_API_KEY', '')
+        itick_key = ITICK_API_KEY  # 使用全局變數
         
         # 取得日期範圍
         taiwan_tz = timezone(timedelta(hours=8))
