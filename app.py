@@ -25,6 +25,11 @@ def load_config():
 
 config = load_config()
 
+def reload_config():
+    """重新載入設定"""
+    global config
+    config = load_config()
+
 # ==================== iTick API 設定 ====================
 ITICK_API_KEY = "ae7824e15cc34160bfe303310973ea9a77ee3c6b1c314202b2ff1bd23db02729"
 ITICK_BASE_URL = "https://api.itick.org"
@@ -171,6 +176,7 @@ def send_telegram():
 @app.route('/api/import/portfolio', methods=['POST'])
 def import_portfolio():
     """匯入持股資料 - 支援 Excel xlsx 和 JSON"""
+    global config  # 重新載入全局 config
     try:
         data = request.json.get('data', '')
         if not data:
