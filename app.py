@@ -81,14 +81,20 @@ def api_portfolio():
     stocks = []
     for stock in portfolio:
         code = stock.get('code', '')
-        price_data = screener.get_daily_price(code, 1)
-        current_price = 0
-        change_pct = 0
-        if price_data:
-            latest = price_data[-1]
-            current_price = latest.get('close', 0)
-            spread = latest.get('spread', 0) or 0
-            change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
+        
+        # 優先使用資料庫中的 current_price
+        current_price = stock.get('current_price', 0)
+        change_pct = stock.get('change_pct', 0)
+        
+        # 如果資料庫沒有價格，才去 API 取
+        if not current_price or current_price == 0:
+            price_data = screener.get_daily_price(code, 1)
+            if price_data:
+                latest = price_data[-1]
+                current_price = latest.get('close', 0)
+                spread = latest.get('spread', 0) or 0
+                change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
+        
         pl = pm.calculate_profit_loss_by_id(stock.get('id'), current_price) if current_price > 0 else {'profit_loss': 0, 'profit_loss_pct': 0}
         stocks.append({
             'id': stock.get('id'),
