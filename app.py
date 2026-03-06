@@ -75,6 +75,10 @@ sl = StrategyLibrary(config)
 def index():
     return render_template('index.html')
 
+@app.route('/p1')
+def index_p1():
+    return render_template('index_p1.html')
+
 @app.route('/api/portfolio')
 def api_portfolio():
     portfolio = pm.get_all()  # now returns list
