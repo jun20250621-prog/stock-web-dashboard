@@ -75,30 +75,20 @@ sl = StrategyLibrary(config)
 def index():
     return render_template('index.html')
 
-@app.route('/p1')
-def index_p1():
-    return render_template('index_p1.html')
-
 @app.route('/api/portfolio')
 def api_portfolio():
     portfolio = pm.get_all()  # now returns list
     stocks = []
     for stock in portfolio:
         code = stock.get('code', '')
-        
-        # 優先使用資料庫中的 current_price
-        current_price = stock.get('current_price', 0)
-        change_pct = stock.get('change_pct', 0)
-        
-        # 如果資料庫沒有價格，才去 API 取
-        if not current_price or current_price == 0:
-            price_data = screener.get_daily_price(code, 1)
-            if price_data:
-                latest = price_data[-1]
-                current_price = latest.get('close', 0)
-                spread = latest.get('spread', 0) or 0
-                change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
-        
+        price_data = screener.get_daily_price(code, 1)
+        current_price = 0
+        change_pct = 0
+        if price_data:
+            latest = price_data[-1]
+            current_price = latest.get('close', 0)
+            spread = latest.get('spread', 0) or 0
+            change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
         pl = pm.calculate_profit_loss_by_id(stock.get('id'), current_price) if current_price > 0 else {'profit_loss': 0, 'profit_loss_pct': 0}
         stocks.append({
             'id': stock.get('id'),
@@ -124,7 +114,7 @@ def api_watchlist():
     try:
         watchlist = wm.get_all()
         stocks = []
-        for idx, item in enumerate(watchlist, 1):
+        for item in watchlist:
             code = item.get('code')
             # 使用與 portfolio 相同的價格取得邏輯
             price_data = screener.get_daily_price(code, 5)
@@ -138,7 +128,6 @@ def api_watchlist():
                 change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
             
             stocks.append({
-                'id': idx,
                 'code': code,
                 'name': item.get('name'),
                 'current_price': current_price,
@@ -213,97 +202,35 @@ def api_stock(code):
 
 @app.route('/api/strong_stocks')
 def api_strong_stocks():
-    """強勢股 API"""
-    try:
-        popular_stocks = [
-            {'code': '2330', 'name': '台積電', 'industry': '半導體', 'price': 0, 'change_pct': 0, 'technical_score': 8},
-            {'code': '2454', 'name': '聯發科', 'industry': 'IC設計', 'price': 0, 'change_pct': 0, 'technical_score': 7},
-            {'code': '2317', 'name': '鴻海', 'industry': '電子', 'price': 0, 'change_pct': 0, 'technical_score': 7},
-            {'code': '2382', 'name': '廣達', 'industry': '電子', 'price': 0, 'change_pct': 0, 'technical_score': 6},
-            {'code': '3711', 'name': '日月光', 'industry': '半導體', 'price': 0, 'change_pct': 0, 'technical_score': 6},
-        ]
-        
-        try:
-            global screener
-            if screener is None:
-                from data.fetcher import TaiwanStockScreener
-                screener = TaiwanStockScreener(config)
-            
-            stocks = screener.screen_strong_stocks(limit=10)
-            
-            for stock in stocks:
-                stock['change_pct'] = round(stock.get('change_pct', 0), 2)
-                stock['momentum_5d'] = round(stock.get('momentum_5d', 0), 2)
-            
-            return jsonify({'success': True, 'data': popular_stocks + stocks[:5]})
-        except:
-            return jsonify({'success': True, 'data': popular_stocks})
-    except Exception as e:
-        return jsonify({'success': True, 'data': []})
-
-@app.route('/api/market')
-def api_market():
-    """市場指數 API"""
-    try:
-        # 回傳基本市場資料，不依賴外部 API
-        indices = {
-            '台灣加權': {'price': None, 'change': None, 'change_pct': None},
-            '台灣50': {'price': None, 'change': None, 'change_pct': None},
-        }
-        
-        # 嘗試取得大盤資訊
-        try:
-            from data.fetcher import StockDataFetcher
-            fetcher = StockDataFetcher(config)
-            
-            # 取得大盤指數
-            try:
-                data = fetcher.get_twse_index()
-                if data:
-                    indices['台灣加權'] = {
-                        'price': data.get('close', data.get('price', 0)),
-                        'change': data.get('change', 0),
-                        'change_pct': data.get('change_pct', 0)
-                    }
-            except:
-                pass
-        except:
-            pass
-        
-        return jsonify(indices)
-    except Exception as e:
-        # 回傳預設值而不錯誤
-        return jsonify({
-            '台灣加權': {'price': 0, 'change': 0, 'change_pct': 0}
-        })
-
-@app.route('/api/top_gainers')
-def api_top_gainers():
-    """漲幅排行 API"""
     try:
         global screener
         if screener is None:
             from data.fetcher import TaiwanStockScreener
             screener = TaiwanStockScreener(config)
         
-        stocks = screener.screen_strong_stocks(limit=20)
+        popular_stocks = [
+            {'code': '2330', 'name': '台積電', 'industry': '半導體'},
+            {'code': '2454', 'name': '聯發科', 'industry': 'IC設計'},
+            {'code': '2317', 'name': '鴻海', 'industry': '電子'},
+            {'code': '2382', 'name': '廣達', 'industry': '電子'},
+            {'code': '3711', 'name': '日月光', 'industry': '半導體'},
+            {'code': '3017', 'name': '奇鋐', 'industry': '散熱'},
+            {'code': '3231', 'name': '緯創', 'industry': '電子'},
+            {'code': '4908', 'name': '前鼎', 'industry': '光電'},
+            {'code': '4977', 'name': '眾達-KY', 'industry': '光電'},
+            {'code': '1590', 'name': '亞德客-KY', 'industry': '氣動'},
+        ]
         
-        # 按漲幅排序
-        stocks = sorted(stocks, key=lambda x: x.get('change_pct', 0), reverse=True)
+        stocks = screener.screen_strong_stocks(limit=10)
         
-        result = []
-        for stock in stocks[:20]:
-            result.append({
-                'code': stock.get('code', ''),
-                'name': stock.get('name', stock.get('code', '')),
-                'price': stock.get('price', 0),
-                'change_pct': round(stock.get('change_pct', 0), 2)
-            })
+        for stock in stocks:
+            stock['change_pct'] = round(stock.get('change_pct', 0), 2)
+            stock['momentum_5d'] = round(stock.get('momentum_5d', 0), 2)
         
-        return jsonify(result)
+        return jsonify({'success': True, 'data': popular_stocks + stocks[:5]})
     except Exception as e:
-        # 回傳空陣列而不是錯誤
-        return jsonify([])
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()})
 
 @app.route('/api/stocks_db', methods=['GET'])
 def api_stocks_db():
@@ -563,8 +490,8 @@ def api_portfolio_update_price(code):
         import requests
         import os
         
-        # 使用 iTick API 取得現價
-        itick_key = ITICK_API_KEY  # 使用全域變數
+        # 直接使用 iTick API 取得現價
+        itick_key = os.environ.get('ITICK_API_KEY', '')
         url = 'https://api.itick.org/stock/quote'
         params = {'region': 'TW', 'code': code.replace('.TW','')}
         headers = {'token': itick_key, 'accept': 'application/json'}
@@ -617,7 +544,7 @@ def api_portfolio_update_all_prices():
         
         portfolio = pm.get_all()
         results = []
-        itick_key = ITICK_API_KEY  # 使用全局變數
+        itick_key = os.environ.get('ITICK_API_KEY', '')
         
         # 取得日期範圍
         taiwan_tz = timezone(timedelta(hours=8))
@@ -762,7 +689,6 @@ def api_watchlist_update_all_prices():
     """更新所有觀察名單的股價"""
     try:
         watchlist = wm.get_all()
-        updated = 0
         for item in watchlist:
             code = item.get('code')
             if code:
@@ -773,12 +699,11 @@ def api_watchlist_update_all_prices():
                             'current_price': price_data.get('price'),
                             'change_pct': price_data.get('change_pct')
                         })
-                        updated += 1
                 except Exception as e:
                     print(f"更新 {code} 價格失敗: {e}")
                     continue
         reload_config()
-        return jsonify({'success': True, 'updated': updated})
+        return jsonify({'success': True, 'updated': len(watchlist)})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -1538,27 +1463,3 @@ def send_daily_news_job():
         print(f"✅ 每日新聞已發送")
     except Exception as e:
         print(f"每日新聞發送失敗: {e}")
-
-# ==================== iTick 股價取得 ====================
-ITICK_API_KEY = "ae7824e15cc34160bfe303310973ea9a77ee3c6b1c314202b2ff1bd23db02729"
-
-def get_stock_price(code):
-    """使用 iTick 取得股票報價"""
-    if code.startswith('00') or code.endswith('B'):
-        return None  # 不支援 ETF
-    
-    try:
-        import urllib.parse
-        url = "https://api.itick.org/stock/quote"
-        params = urllib.parse.urlencode({"region": "TW", "code": code})
-        headers = {'accept': 'application/json', 'token': ITICK_API_KEY}
-        req = urllib.request.Request(f"{url}?{params}", headers=headers)
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode('utf-8'))
-            if data.get('code') == 0 and data.get('data'):
-                d = data['data']
-                return {'price': d.get('p', 0), 'change_pct': d.get('chp', 0)}
-    except:
-        pass
-    return None
-

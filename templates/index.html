@@ -3,492 +3,991 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票分析系統 v1.1</title>
+    <title>台股智能分析系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a2e; color: #eee; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        
-        /* Header */
-        header { background: #16213e; padding: 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-        header h1 { color: #e94560; }
-        .version { background: #e94560; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
-        
-        /* Nav */
-        nav { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        nav button { padding: 10px 20px; background: #0f3460; border: none; color: #fff; cursor: pointer; border-radius: 5px; }
-        nav button:hover, nav button.active { background: #e94560; }
-        
-        /* Auto refresh indicator */
-        .auto-refresh { color: #888; font-size: 12px; align-self: center; }
-        
-        /* Sections */
-        .section { display: none; }
-        .section.active { display: block; }
-        
-        /* Cards */
-        .card { background: #16213e; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
-        .card h2 { color: #e94560; margin-bottom: 15px; }
-        
-        /* Tables */
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #0f3460; }
-        th { background: #0f3460; color: #e94560; }
-        tr:hover { background: #0f3460; }
-        
-        /* Stock colors */
-        .positive { color: #4ade80; }
-        .negative { color: #f87171; }
-        
-        /* Forms */
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; }
-        .form-group input { width: 100%; padding: 10px; background: #0f3460; border: 1px solid #16213e; color: #fff; border-radius: 5px; }
-        
-        /* Buttons */
-        .btn { padding: 10px 20px; background: #e94560; border: none; color: #fff; cursor: pointer; border-radius: 5px; }
-        .btn:hover { background: #c73e54; }
-        .btn-small { padding: 5px 10px; font-size: 12px; }
-        
-        /* Loading */
-        .loading { text-align: center; padding: 20px; color: #888; }
-        .error { text-align: center; padding: 20px; color: #f87171; }
-        
-        /* Forms inline */
-        .form-inline { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
-        .form-inline input { flex: 1; min-width: 100px; }
+        :root { --primary: #1a73e8; --success: #34a853; --danger: #ea4335; --bg: #f8f9fa; }
+        body { background: var(--bg); font-family: 'Microsoft JhengHei', Arial, sans-serif; }
+        .navbar { background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%); }
+        .card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .card-header { background: white; border-bottom: 2px solid #f0f0f0; font-weight: bold; }
+        .profit-positive { color: var(--success); font-weight: bold; }
+        .profit-negative { color: var(--danger); font-weight: bold; }
+        .price-up { color: var(--danger); }
+        .price-down { color: var(--success); }
+        .price-updated { color: #0066ff; font-weight: bold; }
+        #portfolioTable tbody tr:hover { background-color: #e8f4ff; }
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .summary-card { background: white; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .summary-card .value { font-size: 1.6em; font-weight: bold; }
+        .summary-card .label { color: #666; font-size: 0.85em; }
+        .stock-code { font-weight: bold; color: var(--primary); }
+        .chart-container { position: relative; height: 350px; margin: 15px 0; }
+        /* 手機優化 - 已停用 */
+        /* @media (max-width: 768px) {
+            .container-fluid { padding: 5px; }
+            .card { margin-bottom: 10px; border-radius: 8px; }
+            .card-header { padding: 10px; font-size: 14px; }
+            .card-body { padding: 10px; }
+            .table { font-size: 11px; }
+            .table th, .table td { padding: 4px 2px; }
+            .btn { padding: 3px 8px; font-size: 11px; }
+            .navbar { padding: 5px 10px; }
+            .nav-link { padding: 5px 10px; font-size: 12px; }
+            .modal-body { padding: 10px; }
+            .form-control, .form-select { padding: 6px; font-size: 12px; }
+        } */
+        /* 手機版顯示編輯/刪除按鈕 */
+        @media (max-width: 768px) {
+            .btn-sm { padding: 6px 10px; font-size: 14px; }
+            .table .btn-sm i { font-size: 14px; }
+        }
+        /* 表格橫向滾動條樣式 */
+        .table-responsive::-webkit-scrollbar { height: 8px; }
+        .table-responsive::-webkit-scrollbar-track { background: #f1f1f1; }
+        .table-responsive::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        .table-responsive::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div>
-                <h1>📊 股票分析系統</h1>
-                <p>即時市場數據與技術分析</p>
-            </div>
-            <div class="version">v1.1</div>
-        </header>
-        
-        <nav>
-            <button onclick="showSection('market')" class="active">🏠 市場概況</button>
-            <button onclick="showSection('strong')">🚀 強勢股</button>
-            <button onclick="showSection('gainers')">📈 漲幅排行</button>
-            <button onclick="showSection('portfolio')">💼 持股管理</button>
-            <button onclick="showSection('watchlist')">👀 觀察名單</button>
-            <span class="auto-refresh">自動刷新: <span id="autoRefreshCount">0</span></span>
-        </nav>
-        
-        <!-- 市場概況 -->
-        <div id="market" class="section active">
-            <div class="card">
-                <h2>📊 市場指數</h2>
-                <div id="market-data" class="loading">載入中...</div>
-            </div>
+    <nav class="navbar navbar-dark navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="javascript:location.reload()">
+                <i class="fas fa-chart-line me-2"></i>台股智能分析系統 <span class="badge bg-warning text-dark">v1.17</span>
+            </a>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="javascript:loadAll()"><i class="fas fa-sync-alt me-1"></i>重新整理</a></li>
+                <li class="nav-item"><button class="nav-link btn btn-link" data-bs-toggle="modal" data-bs-target="#scheduleModal"><i class="fas fa-clock me-1"></i>排程設定</button></li>
+                <li class="nav-item"><button class="nav-link btn btn-link" onclick="toggleDebugLog()"><i class="fas fa-bug me-1"></i>除錯LOG</button></li>
+                <li class="nav-item"><a class="nav-link" href="javascript:generateSample()"><i class="fas fa-magic me-1"></i>產生樣本</a></li>
+            </ul>
         </div>
-        
-        <!-- 強勢股 -->
-        <div id="strong" class="section">
-            <div class="card">
-                <h2>🚀 強勢股篩選</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>排名</th>
-                            <th>代碼</th>
-                            <th>名稱</th>
-                            <th>現價</th>
-                            <th>漲跌幅</th>
-                            <th>技術分數</th>
-                        </tr>
-                    </thead>
-                    <tbody id="strong-stocks">
-                        <tr><td colspan="6" class="loading">載入中...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+    </nav>
+    <!-- 訊息欄 -->
+    <div class="container-fluid mt-2" style="position: sticky; top: 50px; z-index: 1000;">
+        <div id="messageBar" class="alert alert-dismissible fade show d-none shadow-lg" role="alert" style="margin-bottom: 10px;">
+            <strong id="messageTitle"></strong> <span id="messageText"></span>
+            <button type="button" class="btn-close" onclick="hideMessage()"></button>
         </div>
-        
-        <!-- 漲幅排行 -->
-        <div id="gainers" class="section">
-            <div class="card">
-                <h2>📈 漲幅排行</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>排名</th>
-                            <th>代碼</th>
-                            <th>名稱</th>
-                            <th>現價</th>
-                            <th>漲跌幅</th>
-                        </tr>
-                    </thead>
-                    <tbody id="top-gainers">
-                        <tr><td colspan="5" class="loading">載入中...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+    </div>
+    <div class="container-fluid mt-4">
+        <div class="summary-cards">
+            <div class="summary-card"><div class="value" id="totalValue">...</div><div class="label">總市值</div></div>
+            <div class="summary-card"><div class="value" id="totalPL">...</div><div class="label">總損益</div></div>
+            <div class="summary-card"><div class="value" id="totalPLPct">...</div><div class="label">報酬率</div></div>
+            <div class="summary-card"><div class="value" id="stockCount">-</div><div class="label">持股檔數</div></div>
+            <div class="summary-card"><div class="value" id="winRate">-</div><div class="label">勝率</div></div>
         </div>
-        
-        <!-- 持股管理 -->
-        <div id="portfolio" class="section">
-            <div class="card">
-                <h2>💼 持股管理</h2>
-                <div class="form-inline">
-                    <input type="text" id="portfolio-code" placeholder="股票代碼 (如 2330)">
-                    <input type="text" id="portfolio-name" placeholder="股票名稱">
-                    <input type="number" id="portfolio-shares" placeholder="股數">
-                    <input type="number" id="portfolio-cost" placeholder="成本">
-                    <button class="btn" onclick="addPortfolio()">新增</button>
-                    <button class="btn btn-small" onclick="refreshPortfolioPrices()" style="background:#0f3460;">🔄 更新股價</button>
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#portfolio"><i class="fas fa-wallet me-1"></i>持股</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#watchlist"><i class="fas fa-eye me-1"></i>觀察名單</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#trades"><i class="fas fa-history me-1"></i>交易紀錄</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#analysis"><i class="fas fa-chart-pie me-1"></i>分析</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#strong"><i class="fas fa-fire me-1"></i>強勢股</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#chart"><i class="fas fa-chart-line me-1"></i>技術圖</button></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="portfolio">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span><i class="fas fa-wallet me-2"></i>持股名單</span>
+                        <div><button class="btn btn-sm btn-info me-1" onclick="analyzeAll()"><i class="fas fa-chart-line"></i>分析</button><button class="btn btn-sm btn-success me-1" onclick="showAddPortfolio()"><i class="fas fa-plus"></i>新增</button><button class="btn btn-sm btn-outline-primary me-1" onclick="exportPortfolio()"><i class="fas fa-download"></i>匯出</button><label class="btn btn-sm btn-outline-secondary me-1 mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importPortfolio(this)"></label><button class="btn btn-sm btn-outline-warning" onclick="downloadBackup()"><i class="fas fa-save"></i>備份</button></div>
+                    </div>
+                    <div class="card-body"><div class="table-responsive"><table class="table table-hover" id="portfolioTable"><thead><tr><th>ID</th><th>代碼</th><th>名稱</th><th>股數</th><th>成本</th><th>收盤價</th><th>漲跌幅</th><th>損益</th><th>損益率</th><th>停損</th><th>停利</th><th>產業</th><th>應用</th><th>買入日</th><th>操作</th></tr></thead><tbody></tbody></table></div></div>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>代碼</th>
-                            <th>名稱</th>
-                            <th>股數</th>
-                            <th>成本</th>
-                            <th>現價</th>
-                            <th>漲跌幅</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="portfolio-list">
-                        <tr><td colspan="7" class="loading">載入中...</td></tr>
-                    </tbody>
-                </table>
+            </div>
+            <div class="tab-pane fade" id="watchlist">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span><i class="fas fa-eye me-2"></i>觀察名單</span>
+                        <button class="btn btn-sm btn-success" onclick="showAddWatchlist()"><i class="fas fa-plus"></i>新增</button>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="exportWatchlist()"><i class="fas fa-download"></i>匯出</button>
+                        <label class="btn btn-sm btn-outline-secondary mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importWatchlist(this)"></label>
+                    </div>
+                    <div class="card-body"><div class="table-responsive"><table class="table table-hover" id="watchlistTable"><thead><tr><th>ID</th><th>代碼</th><th>名稱</th><th>現價</th><th>目標價</th><th>漲跌幅</th><th>產業</th><th>追蹤原因</th><th>新增日</th><th>操作</th></tr></thead><tbody></tbody></table></div></div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="trades">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between">
+                        <span><i class="fas fa-history me-2"></i>交易紀錄</span>
+                        <div>
+                            <button class="btn btn-sm btn-success me-1" onclick="showAddTrade()"><i class="fas fa-plus"></i>新增</button>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="exportTrades()"><i class="fas fa-download"></i>匯出</button>
+                            <label class="btn btn-sm btn-outline-secondary mb-0"><i class="fas fa-upload"></i>匯入<input type="file" hidden onchange="importTrades(this)"></label>
+                        </div>
+                    </div>
+                    <div class="card-body"><div class="table-responsive"><table class="table table-hover" id="tradesTable"><thead><tr><th>ID</th><th>代碼</th><th>名稱</th><th>買入日期</th><th>買入價格</th><th>股數</th><th>賣出日期</th><th>賣出價格</th><th>損益</th><th>結果</th><th>紀律</th><th>策略</th><th>操作</th></tr></thead><tbody></tbody></table></div></div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="analysis">
+                <div class="row">
+                    <div class="col-md-6"><div class="card"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="fas fa-chart-pie me-2"></i>紀律分析</span><button class="btn btn-sm btn-outline-primary" onclick="reAnalyze()"><i class="fas fa-redo me-1"></i>重新分析</button></div><div class="card-body"><canvas id="disciplineChart"></canvas><div id="disciplineStats"></div></div></div></div>
+                    <div class="col-md-6"><div class="card"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="fas fa-chart-bar me-2"></i>策略表現</span><button class="btn btn-sm btn-outline-primary" onclick="reAnalyze()"><i class="fas fa-redo me-1"></i>重新分析</button></div><div class="card-body"><canvas id="strategyChart"></canvas></div></div></div>
+                </div>
+                <div class="card mt-3"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="fas fa-chart-line me-2"></i>每月績效趨勢</span><button class="btn btn-sm btn-outline-primary" onclick="reAnalyze()"><i class="fas fa-redo me-1"></i>重新分析</button></div><div class="card-body"><canvas id="monthlyChart"></canvas></div></div>
+            </div>
+            <div class="tab-pane fade" id="strong">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-fire me-2"></i>強勢股篩選</span>
+                        <div>
+                            <input type="date" class="form-control form-control-sm" id="strongDate" style="width:140px;display:inline-block;" value="">
+                            <button class="btn btn-sm btn-danger" onclick="loadStrongStocks()"><i class="fas fa-search"></i>篩選</button>
+                        </div>
+                    </div>
+                    <div class="card-body"><table class="table table-hover" id="strongStocksTable"><thead><tr><th>排名</th><th>ID</th><th>代碼</th><th>名稱</th><th>產業</th><th>現價</th><th>5日動能</th><th>漲跌幅</th></tr></thead><tbody></tbody></table></div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="chart">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line me-2"></i>個股技術分析
+                        <select class="form-select form-select-sm ms-3" id="stockSelect" style="width:auto;display:inline-block;"><option value="">選擇股票...</option></select>
+                        <select class="form-select form-select-sm ms-2" id="chartType" style="width:auto;display:inline-block;" onchange="loadStockChart()">
+                            <option value="price">股價走勢圖</option>
+                            <option value="kdj">KDJ 指標</option>
+                            <option value="macd">MACD 指標</option>
+                            <option value="rsi">RSI 指標</option>
+                            <option value="ma">MA 均線</option>
+                        </select>
+                    </div>
+                    <div class="card-body"><div class="chart-container"><canvas id="mainChart"></canvas></div></div>
+                </div>
             </div>
         </div>
-        
-        <!-- 觀察名單 -->
-        <div id="watchlist" class="section">
-            <div class="card">
-                <h2>👀 觀察名單</h2>
-                <div class="form-inline">
-                    <input type="text" id="watchlist-code" placeholder="股票代碼 (如 2330)">
-                    <input type="text" id="watchlist-name" placeholder="股票名稱">
-                    <input type="number" id="watchlist-target" placeholder="目標價">
-                    <button class="btn" onclick="addWatchlist()">新增</button>
-                    <button class="btn btn-small" onclick="refreshWatchlistPrices()" style="background:#0f3460;">🔄 更新股價</button>
+    </div>
+    <!-- 排程設定 Modal -->
+    <div class="modal fade" id="scheduleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title"><i class="fas fa-clock me-2"></i>排程設定</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">早盤報告時間</label>
+                        <input type="time" class="form-control" id="scheduleMorning">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">盤中監控時間（多個用逗點分隔）</label>
+                        <input type="text" class="form-control" id="scheduleMonitor" placeholder="09:30,10:30,11:30,13:00,14:00">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">晚盤報告時間</label>
+                        <input type="time" class="form-control" id="scheduleEvening">
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 設定後會自動按照時間發送報告到 Telegram
+                    </div>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>代碼</th>
-                            <th>名稱</th>
-                            <th>現價</th>
-                            <th>漲跌幅</th>
-                            <th>目標價</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="watchlist-list">
-                        <tr><td colspan="6" class="loading">載入中...</td></tr>
-                    </tbody>
-                </table>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveSchedule()">儲存設定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 股票分析 Modal -->
+    <div class="modal fade" id="analyzeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-chart-line me-2"></i>股票分析 - <span id="analyzeCode"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="analyzeContent">
+                    <div class="text-center"><div class="spinner-border"></div></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 編輯 Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title" id="modalTitle"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button type="button" class="btn btn-primary" id="modalSave">儲存</button></div>
+        </div></div></div>
+    <!-- 除錯LOG Modal -->
+    <div class="modal fade" id="debugLogModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-bug me-2"></i>除錯LOG</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearDebugLog()"><i class="fas fa-trash"></i>清除</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="copyDebugLog()"><i class="fas fa-copy"></i>複製</button>
+                    </div>
+                    <div id="debugLogContent" class="bg-dark text-light p-3" style="height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                </div>
             </div>
         </div>
     </div>
     
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Auto-refresh counter
-        let autoRefreshCount = 0;
+    // 除錯LOG系統
+    const debugLogs = [];
+    const MAX_LOGS = 100;
+    
+    function log(level, source, message){
+        const time = new Date().toLocaleTimeString();
+        const logEntry = {time, level, source, message};
+        debugLogs.push(logEntry);
+        if(debugLogs.length > MAX_LOGS) debugLogs.shift();
         
-        // 切換頁面
-        function showSection(id) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            event.target.classList.add('active');
-        }
+        // 同時輸出到瀏覽器console
+        const icon = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+        console[level] ? console[level](icon+' ['+source+'] '+message) : console.log(icon+' ['+source+'] '+message);
+    }
+    
+    function toggleDebugLog(){
+        const modal = new bootstrap.Modal(document.getElementById('debugLogModal'));
+        modal.show();
+        renderDebugLog();
+    }
+    
+    function renderDebugLog(){
+        const container = document.getElementById('debugLogContent');
+        container.innerHTML = debugLogs.map(l => 
+            '<div class="mb-1"><span class="text-secondary">'+l.time+'</span> <span class="text-'+(l.level==='error'?'danger':l.level==='warn'?'warning':'info')+'">'+l.level.toUpperCase()+'</span> [<span class="text-warning">'+l.source+'</span>] '+l.message+'</div>'
+        ).join('');
+        container.scrollTop = container.scrollHeight;
+    }
+    
+    function clearDebugLog(){
+        debugLogs.length = 0;
+        renderDebugLog();
+    }
+    
+    function copyDebugLog(){
+        const text = debugLogs.map(l => '['+l.time+'] ['+l.level.toUpperCase()+'] ['+l.source+'] '+l.message).join('\n');
+        navigator.clipboard.writeText(text).then(() => showSuccess('已複製到剪貼簿'));
+    }
+    
+    // 初始化
+    log('info', '系統', '台股智能分析系統 v1.7 啟動');
+    let disciplineChart, strategyChart, mainChart;
+    let portfolioData=[], watchlistData=[], tradesData=[];
+    const modal = new bootstrap.Modal(document.getElementById('editModal'));
+
+    function loadAll(){ loadSchedule(); loadPortfolio(); loadWatchlist(); loadTrades(); loadAnalysis(); loadStockSelect(); }
+    
+    // 訊息欄函數
+    function showMessage(title, text, type = 'info'){
+        const bar = document.getElementById('messageBar');
+        const titleEl = document.getElementById('messageTitle');
+        const textEl = document.getElementById('messageText');
         
-        // 顯示載入中
-        function showLoading(elementId, message = '載入中...') {
-            document.getElementById(elementId).innerHTML = '<tr><td colspan="10" class="loading">' + message + '</td></tr>';
-        }
+        bar.className = 'alert alert-'+type+' alert-dismissible fade show';
+        titleEl.textContent = title;
+        textEl.textContent = text;
+        bar.classList.remove('d-none');
         
-        // 顯示無資料
-        function showEmpty(elementId, message = '無資料') {
-            document.getElementById(elementId).innerHTML = '<tr><td colspan="10" class="loading">' + message + '</td></tr>';
-        }
-        
-        // 顯示錯誤
-        function showError(elementId, message) {
-            document.getElementById(elementId).innerHTML = '<tr><td colspan="10" class="error">' + message + '</td></tr>';
-        }
-        
-        // 載入市場資料
-        async function loadMarket() {
-            try {
-                const res = await fetch('/api/market');
-                const data = await res.json();
-                
-                if (!data || Object.keys(data).length === 0) {
-                    showEmpty('market-data', '暫無市場資料');
-                    return;
-                }
-                
-                let html = '<table><tr><th>指數</th><th>價格</th><th>漲跌</th><th>漲跌幅</th></tr>';
-                for (const [name, info] of Object.entries(data)) {
-                    if (info && typeof info === 'object') {
-                        html += `<tr>
-                            <td>${name}</td>
-                            <td>${info.price?.toFixed(2) || 'N/A'}</td>
-                            <td>${info.change?.toFixed(2) || 'N/A'}</td>
-                            <td class="${(info.change_pct || 0) >= 0 ? 'positive' : 'negative'}">${info.change_pct?.toFixed(2) || 'N/A'}%</td>
-                        </tr>`;
+        // 除錯LOG
+        console.log('[訊息] '+title+': '+text);
+    }
+    
+    function hideMessage(){
+        document.getElementById('messageBar').classList.add('d-none');
+    }
+    
+    function showSuccess(title, text){ showMessage(title, text, 'success'); }
+    function showError(title, text){ showMessage(title, text, 'danger'); console.error('[錯誤] '+title+': '+text); }
+    function showWarning(title, text){ showMessage(title, text, 'warning'); console.warn('[警告] '+title+': '+text); }
+    function showInfo(title, text){ showMessage(title, text, 'info'); }
+    
+    async function loadSchedule(){
+        try{
+            const resp = await fetch('/api/schedule');
+            const schedule = await resp.json();
+            document.getElementById('scheduleMorning').value = schedule.morning || '08:30';
+            document.getElementById('scheduleMonitor').value = (schedule.monitor || []).join(',');
+            document.getElementById('scheduleEvening').value = schedule.evening || '15:00';
+        }catch(e){ console.error(e); }
+    }
+    
+    async function saveSchedule(){
+        const schedule = {
+            morning: document.getElementById('scheduleMorning').value,
+            monitor: document.getElementById('scheduleMonitor').value.split(',').map(s=>s.trim()).filter(s=>s),
+            evening: document.getElementById('scheduleEvening').value
+        };
+        await fetch('/api/schedule', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({schedule})
+        });
+        bootstrap.Modal.getInstance(document.getElementById('scheduleModal')).hide();
+        alert('排程設定已儲存！');
+    }
+
+    async function loadPortfolio(){
+        try{
+            // 先呼叫更新所有股價API
+            showInfo('持股載入', '正在更新股價...');
+            let updateMsg = '';
+            let updatedStocks = [];
+            try{
+                const updateRes = await fetch('/api/portfolio/update_all_prices', {method: 'POST'});
+                const updateData = await updateRes.json();
+                if(updateData.success && updateData.count > 0){
+                    // 收集更新的股票代碼
+                    if(updateData.data){
+                        updatedStocks = updateData.data.filter(x => x.success).map(x => x.code + ':' + x.price);
                     }
+                    updateMsg = updatedStocks.length > 0 ? updatedStocks.join(', ') : '無更新';
+                }else{
+                    updateMsg = '無更新';
                 }
-                html += '</table>';
-                document.getElementById('market-data').innerHTML = html;
-            } catch (e) {
-                showError('market-data', '載入失敗: ' + e.message);
-            }
-        }
-        
-        // 載入強勢股
-        async function loadStrongStocks() {
-            try {
-                const res = await fetch('/api/strong_stocks');
-                const result = await res.json();
-                
-                let stocks = [];
-                if (result.success && result.data) {
-                    stocks = result.data;
-                } else if (Array.isArray(result)) {
-                    stocks = result;
-                }
-                
-                if (!stocks || stocks.length === 0) {
-                    showEmpty('strong-stocks', '無強勢股資料');
-                    return;
-                }
-                
-                let html = '';
-                stocks.forEach((stock, i) => {
-                    html += `<tr>
-                        <td>${i + 1}</td>
-                        <td>${stock.code || ''}</td>
-                        <td>${stock.name || stock.code || ''}</td>
-                        <td>${stock.price ? '$' + stock.price.toFixed(2) : 'N/A'}</td>
-                        <td class="${(stock.change_pct || 0) >= 0 ? 'positive' : 'negative'}">${stock.change_pct?.toFixed(2) || '0.00'}%</td>
-                        <td>${stock.technical_score || stock.momentum_score || 'N/A'}/10</td>
-                    </tr>`;
-                });
-                document.getElementById('strong-stocks').innerHTML = html;
-            } catch (e) {
-                showError('strong-stocks', '載入失敗');
-            }
-        }
-        
-        // 載入漲幅排行
-        async function loadTopGainers() {
-            try {
-                const res = await fetch('/api/top_gainers');
-                const data = await res.json();
-                
-                if (!data || data.length === 0) {
-                    showEmpty('top-gainers', '無漲幅排行資料');
-                    return;
-                }
-                
-                let html = '';
-                data.forEach((stock, i) => {
-                    html += `<tr>
-                        <td>${i + 1}</td>
-                        <td>${stock.code || ''}</td>
-                        <td>${stock.name || stock.code || ''}</td>
-                        <td>${stock.price ? '$' + stock.price.toFixed(2) : 'N/A'}</td>
-                        <td class="${(stock.change_pct || 0) >= 0 ? 'positive' : 'negative'}">${stock.change_pct?.toFixed(2) || '0.00'}%</td>
-                    </tr>`;
-                });
-                document.getElementById('top-gainers').innerHTML = html;
-            } catch (e) {
-                showError('top-gainers', '載入失敗');
-            }
-        }
-        
-        // 載入持股
-        async function loadPortfolio() {
-            try {
-                const res = await fetch('/api/portfolio');
-                const data = await res.json();
-                
-                if (!data || data.length === 0) {
-                    showEmpty('portfolio-list', '無持股資料');
-                    return;
-                }
-                
-                let html = '';
-                data.forEach(stock => {
-                    const changePct = stock.current_price && stock.cost ? ((stock.current_price - stock.cost) / stock.cost * 100).toFixed(2) : '0.00';
-                    const priceClass = (stock.current_price || 0) >= (stock.cost || 0) ? 'positive' : 'negative';
-                    html += `<tr>
-                        <td>${stock.code || ''}</td>
-                        <td>${stock.name || ''}</td>
-                        <td>${stock.shares || 0}</td>
-                        <td>$${stock.cost || 0}</td>
-                        <td>${stock.current_price ? '$' + stock.current_price : 'N/A'}</td>
-                        <td class="${priceClass}">${changePct}%</td>
-                        <td><button onclick="deletePortfolio('${stock.code}')" style="background:#f87171;padding:5px 10px;border:none;border-radius:3px;cursor:pointer;">🗑️</button></td>
-                    </tr>`;
-                });
-                document.getElementById('portfolio-list').innerHTML = html;
-            } catch (e) {
-                showError('portfolio-list', '載入失敗: ' + e.message);
-            }
-        }
-        
-        // 更新持股股價
-        async function refreshPortfolioPrices() {
-            try {
-                const res = await fetch('/api/portfolio/update_all_prices', { method: 'POST' });
-                const result = await res.json();
-                loadPortfolio();
-                alert(result.success ? '股價更新完成' : '更新失敗');
-            } catch (e) {
-                alert('更新失敗: ' + e.message);
-            }
-        }
-        
-        // 新增持股
-        async function addPortfolio() {
-            const code = document.getElementById('portfolio-code').value;
-            const name = document.getElementById('portfolio-name').value;
-            const shares = document.getElementById('portfolio-shares').value;
-            const cost = document.getElementById('portfolio-cost').value;
-            
-            if (!code || !shares || !cost) {
-                alert('請填寫必要欄位');
-                return;
+            }catch(e){
+                updateMsg = '更新失敗';
+                console.log('更新股價失敗', e);
             }
             
-            try {
-                await fetch('/api/portfolio', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ code, name, shares, cost })
-                });
-                
-                document.getElementById('portfolio-code').value = '';
-                document.getElementById('portfolio-name').value = '';
-                document.getElementById('portfolio-shares').value = '';
-                document.getElementById('portfolio-cost').value = '';
-                
-                loadPortfolio();
-            } catch (e) {
-                alert('新增失敗: ' + e.message);
+            const resp = await fetch('/api/portfolio?t=' + Date.now());
+            portfolioData = await resp.json();
+            
+            // 顯示更新結果
+            if(updateMsg && updateMsg !== '無更新' && updateMsg !== '更新失敗'){
+                showSuccess('收盤價更新', updateMsg);
+            }else if(updateMsg === '無更新'){
+                showInfo('收盤價', '無股票需更新');
+            }else{
+                showError('收盤價更新', updateMsg);
             }
+            
+            let html = ''; let totalValue = 0, totalCost = 0;
+            portfolioData.forEach(s => {
+                totalValue += (s.current_price||0)*(s.shares||1000); totalCost += (s.cost||0)*(s.shares||1000);
+                const pc = (s.profit_loss||0)>=0?'profit-positive':'profit-negative';
+                const cc = (s.change_pct||0)>=0?'price-up':'price-down';
+                // 判斷是否有收盤價，用藍色標示
+                const priceClass = s.current_price > 0 ? 'price-updated' : '';
+                const priceDisplay = s.current_price > 0 ? s.current_price : (s.cost > 0 ? '-' : '-');
+                // 新增點擊整列更新收盤價功能
+                html += `<tr onclick="updateStockPrice('${s.code}', ${s.id})" style="cursor:pointer" title="點擊更新收盤價"><td>${s.id||'-'}</td><td><b>${s.code}</b></td><td>${s.name||''}</td><td>${s.shares||'-'}</td><td>${s.cost||'-'}</td><td class="${priceClass}">${priceDisplay}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.stop_loss||'-'}</td><td>${s.stop_profit||'-'}</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-info me-1" onclick='analyzeStock("${s.code}", ${s.id})'><i class="fas fa-chart-line"></i></button><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}", ${s.id})'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}', ${s.id})"><i class="fas fa-trash"></i></button></td></tr>`;
+            });
+            document.querySelector('#portfolioTable tbody').innerHTML = html || '<tr><td colspan="13" class="text-center">無持股資料</td></tr>';
+            const totalPL = totalValue-totalCost, totalPLPct = totalCost>0?totalPL/totalCost*100:0;
+            document.getElementById('totalValue').textContent = '$'+totalValue.toLocaleString();
+            document.getElementById('totalPL').textContent = (totalPL>=0?'+':'')+totalPL.toLocaleString();
+            document.getElementById('totalPL').className = 'value '+(totalPL>=0?'profit-positive':'profit-negative');
+            document.getElementById('totalPLPct').textContent = (totalPLPct>=0?'+':'')+totalPLPct.toFixed(2)+'%';
+            document.getElementById('totalPLPct').className = 'value '+(totalPLPct>=0?'profit-positive':'profit-negative');
+            document.getElementById('stockCount').textContent = portfolioData.length;
+        }catch(e){ console.error(e); }
+    }
+
+    function editPortfolio(code){
+        const s = portfolioData.find(x => x.code === code); if(!s) return;
+        document.getElementById('modalTitle').textContent = '編輯持股 - '+code;
+        document.getElementById('modalBody').innerHTML = `
+            <div class="row"><div class="col mb-2"><label>股票代碼</label><input class="form-control" value="${s.code}" disabled></div><div class="col mb-2"><label>股票名稱</label><input class="form-control" id="pName" value="${s.name||''}"></div></div>
+            <div class="row"><div class="col mb-2"><label>成本價</label><input class="form-control" id="pCost" type="number" value="${s.cost||''}"></div><div class="col mb-2"><label>股數</label><input class="form-control" id="pShares" type="number" value="${s.shares||1000}"></div></div>
+            <div class="row"><div class="col mb-2"><label>停損價</label><input class="form-control" id="pStopLoss" type="number" value="${s.stop_loss||''}"></div><div class="col mb-2"><label>停利價</label><input class="form-control" id="pStopProfit" type="number" value="${s.stop_profit||''}"></div></div>
+            <div class="row"><div class="col mb-2"><label>產業</label><select class="form-control" id="pIndustry"><option value="">請選擇...</option><option value="半導體" ${s.industry=='半導體'?'selected':''}>半導體</option><option value="IC設計" ${s.industry=='IC設計'?'selected':''}>IC設計</option><option value="電子" ${s.industry=='電子'?'selected':''}>電子</option><option value="光電" ${s.industry=='光電'?'selected':''}>光電</option><option value="通訊" ${s.industry=='通訊'?'selected':''}>通訊</option><option value="航太" ${s.industry=='航太'?'selected':''}>航太</option><option value="散熱" ${s.industry=='散熱'?'selected':''}>散熱</option><option value="氣動" ${s.industry=='氣動'?'selected':''}>氣動</option><option value="電源" ${s.industry=='電源'?'selected':''}>電源</option><option value="其他" ${s.industry=='其他'?'selected':''}>其他</option></select></div><div class="col mb-2"><label>應用</label><select class="form-control" id="pApplication"><option value="">請選擇...</option><option value="AI/高效能運算" ${s.application=='AI/高效能運算'?'selected':''}>AI/高效能運算</option><option value="AI伺服器" ${s.application=='AI伺服器'?'selected':''}>AI伺服器</option><option value="AI/手機晶片" ${s.application=='AI/手機晶片'?'selected':''}>AI/手機晶片</option><option value="AI/顯示驅動" ${s.application=='AI/顯示驅動'?'selected':''}>AI/顯示驅動</option><option value="AI先進封裝" ${s.application=='AI先進封裝'?'selected':''}>AI先進封裝</option><option value="AI/周邊晶片" ${s.application=='AI/周邊晶片'?'selected':''}>AI/周邊晶片</option><option value="IC通路" ${s.application=='IC通路'?'selected':''}>IC通路</option><option value="光通訊" ${s.application=='光通訊'?'selected':''}>光通訊</option><option value="飛機維修" ${s.application=='飛機維修'?'selected':''}>飛機維修</option><option value="自動化設備" ${s.application=='自動化設備'?'selected':''}>自動化設備</option><option value="資料中心需求" ${s.application=='資料中心需求'?'selected':''}>資料中心需求</option><option value="PC/AI" ${s.application=='PC/AI'?'selected':''}>PC/AI</option><option value="蘋果供應鏈" ${s.application=='蘋果供應鏈'?'selected':''}>蘋果供應鏈</option><option value="車用" ${s.application=='車用'?'selected':''}>車用</option><option value="其他" ${s.application=='其他'?'selected':''}>其他</option></select></div></div>
+            <div class="mb-2"><label>買入日期</label><input class="form-control" id="pBuyDate" type="date" value="${s.buy_date||''}"></div>
+        `;
+        document.getElementById('modalSave').onclick = async () => {
+            const data = {code: code, name: document.getElementById('pName').value, cost: parseFloat(document.getElementById('pCost').value), shares: parseInt(document.getElementById('pShares').value), stop_loss: parseFloat(document.getElementById('pStopLoss').value), stop_profit: parseFloat(document.getElementById('pStopProfit').value), industry: document.getElementById('pIndustry').value, application: document.getElementById('pApplication').value, buy_date: document.getElementById('pBuyDate').value};
+            await fetch('/api/portfolio/update/'+code, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+            modal.hide(); loadPortfolio();
+        };
+
+    // 點擊持股列顯示詳細資訊
+    async function updateStockPrice(code){
+        // 取得持股資料
+        const portfolio = await fetch('/api/portfolio').then(r => r.json());
+        const stock = portfolio.find(s => s.code === code);
+        
+        if (!stock) {
+            showError('錯誤', '找不到持股資料');
+            return;
         }
         
-        // 刪除持股
-        async function deletePortfolio(code) {
-            if (!confirm(`確定要刪除 ${code} 嗎？`)) return;
-            try {
-                await fetch(`/api/portfolio/${code}`, { method: 'DELETE' });
-                loadPortfolio();
-            } catch (e) {
-                alert('刪除失敗: ' + e.message);
+        // 組成詳細訊息
+        const detailMsg = `📊 ${stock.name} (${stock.code})
+💰 成本: ${stock.cost}
+💵 現價: ${stock.current_price}
+📈 漲跌幅: ${stock.change_pct}
+💵 損益: ${stock.profit_loss} (${stock.profit_loss_pct}%)
+🎯 停損: ${stock.stop_loss} | 停利: ${stock.stop_profit}
+🏷️ 產業: ${stock.industry}
+📝 應用: ${stock.application}`;
+        
+        // 顯示訊息
+        showInfo('持股資訊', detailMsg.replace(/\n/g, '<br>'));
+        log('info', '持股', `${code} 詳細資訊已顯示`);
+        
+        // 發送到 Telegram
+        try {
+            const res = await fetch('/api/telegram/send', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: detailMsg})
+            });
+            const json = await res.json();
+            if(json.success){
+                log('info', 'Telegram', '已發送');
+            } else {
+                log('warn', 'Telegram', '發送失敗: ' + json.error);
             }
+        } catch(e) {
+            log('error', 'Telegram', '發送錯誤: ' + e.message);
         }
         
-        // 載入觀察名單
-        async function loadWatchlist() {
+        // 同時更新收盤價（背景進行）
+        try{
+            const res = await fetch('/api/portfolio/update_all_prices', {method: 'POST'});
+            const json = await res.json();
+            if(json.success){
+                loadPortfolio(); // 重新載入持股資料
+            }
+        }catch(e){
+            console.log('更新收盤價失敗:', e);
+        }
+    }
+    
+    async function analyzeStock(code, id = null){
+        log('info', '分析', '開始分析股票: '+code + (id ? ' (ID: '+id+')' : ''));
+        document.getElementById('analyzeCode').textContent = code + (id ? ' #'+id : '');
+        document.getElementById('analyzeContent').innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
+        const modal = new bootstrap.Modal(document.getElementById('analyzeModal'));
+        modal.show();
+        
+        try{
+            // 取得分析資料
+            log('info', 'API', '呼叫分析API: /api/portfolio/analyze/'+code);
+            const res = await fetch('/api/portfolio/analyze/'+code);
+            const json = await res.json();
+            
+            // 取得停損停利計算
+            let stopsData = null;
             try {
-                const res = await fetch('/api/watchlist');
-                const data = await res.json();
+                const stopsRes = await fetch('/api/portfolio/stops/'+code);
+                const stopsJson = await stopsRes.json();
+                if(stopsJson.success) stopsData = stopsJson.data;
+            } catch(e) {}
+            
+            log('info', 'API', 'API回應: success='+json.success);
+            
+            if(json.success){
+                const d = json.data;
+                log('info', '分析', '股票 '+code+' 建議: '+d.recommendation);
                 
-                if (!data || data.length === 0) {
-                    showEmpty('watchlist-list', '無觀察名單');
-                    return;
+                const recClass = d.recommendation === 'sell' ? 'text-danger' : d.recommendation === 'buy' ? 'text-success' : 'text-warning';
+                const recIcon = d.recommendation === 'sell' ? 'fa-arrow-down' : d.recommendation === 'buy' ? 'fa-arrow-up' : 'fa-minus';
+                
+                // 停損停利資訊
+                let stopLossInfo = '-';
+                let stopProfitInfo = '-';
+                if(stopsData){
+                    stopLossInfo = `保守: ${stopsData.stop_loss_conservative}元 | 一般: ${stopsData.stop_loss}元`;
+                    stopProfitInfo = `保守: ${stopsData.stop_profit}元 | 積極: ${stopsData.stop_profit_aggressive}元`;
                 }
                 
-                let html = '';
-                data.forEach(stock => {
-                    const changePct = stock.current_price && stock.target_price ? ((stock.current_price - stock.target_price) / stock.target_price * 100).toFixed(2) : '0.00';
-                    const priceClass = (stock.current_price || 0) >= (stock.target_price || 0) ? 'positive' : 'negative';
+                document.getElementById('analyzeContent').innerHTML = `
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">基本資料</div>
+                                <div class="card-body">
+                                    <p><strong>股名：</strong>${d.name||'-'}</p>
+                                    <p><strong>成本：</strong>${d.cost||'-'} 元</p>
+                                    <p><strong>股數：</strong>${d.shares||'-'} 股</p>
+                                    <p><strong>現價：</strong>${d.current_price||'-'} 元</p>
+                                    <p><strong>產業：</strong>${d.industry||'-'}</p>
+                                    <p><strong>應用：</strong>${d.application||'-'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">損益分析</div>
+                                <div class="card-body">
+                                    <p><strong>損益金額：</strong><span class="${(d.profit_loss||0)>=0?'text-success':'text-danger'}">${(d.profit_loss||0)>=0?'+':''}${d.profit_loss?.toLocaleString()||'-'} 元</span></p>
+                                    <p><strong>損益率：</strong><span class="${(d.profit_loss_pct||0)>=0?'text-success':'text-danger'}">${(d.profit_loss_pct||0)>=0?'+':''}${d.profit_loss_pct?.toFixed(2)||'-'}%</span></p>
+                                    <p><strong>漲跌幅：</strong><span class="${(d.change_pct||0)>=0?'text-danger':'text-success'}">${(d.change_pct||0)>=0?'+':''}${d.change_pct?.toFixed(2)||'-'}%</span></p>
+                                    <p><strong>停損點：</strong>${d.stop_loss||'-'} 元</p>
+                                    <p><strong>停利點：</strong>${d.stop_profit||'-'} 元</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">🎯 建議停損停利價</div>
+                                <div class="card-body">
+                                    <p><strong>建議停損：</strong><span class="text-danger">${stopLossInfo}</span></p>
+                                    <p><strong>建議停利：</strong><span class="text-success">${stopProfitInfo}</span></p>
+                                    <hr>
+                                    <p><small>※ 保守策略：停損 -10%、停利 +10%</small><br><small>※ 積極策略：停損 -8%、停利 +15%</small></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">技術指標</div>
+                                <div class="card-body">
+                                    <p><strong>MA5：</strong>${d.ma5||'-'} 元</p>
+                                    <p><strong>MA20：</strong>${d.ma20||'-'} 元</p>
+                                    <p><strong>RSI：</strong>${d.rsi||'-'}</p>
+                                    <p><strong>成交量：</strong>${d.volume?.toLocaleString()||'-'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">基本面</div>
+                                <div class="card-body">
+                                    <p><strong>本益比：</strong>${d.pe_ratio||'-'}</p>
+                                    <p><strong>EPS：</strong>${d.eps||'-'}</p>
+                                    <p><strong>殖利率：</strong>${d.dividend_yield||'-'}%</p>
+                                    <p><strong>分析師目標價：</strong>${d.analyst_target||'-'} 元</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5><i class="fas ${recIcon} me-2"></i>建議：<span class="${recClass}">${d.recommendation === 'sell' ? '賣出' : d.recommendation === 'buy' ? '買入' : '續抱'}</span></h5>
+                            <p class="mb-0">${d.reason||'-'}</p>
+                        </div>
+                    </div>
+                `;
+            }else{
+                document.getElementById('analyzeContent').innerHTML = '<div class="alert alert-danger">'+json.error+'</div>';
+            }
+        }catch(e){
+            document.getElementById('analyzeContent').innerHTML = '<div class="alert alert-danger">載入失敗：'+e.message+'</div>';
+        }
+    }
+
+    async function analyzeAll(){
+        log('info', '分析', '開始分析所有持股');
+        showInfo('分析中', '正在分析所有持股，請稍候...');
+        try{
+            log('info', 'API', '呼叫分析API: /api/portfolio/analyze_all');
+            const res = await fetch('/api/portfolio/analyze_all');
+            const json = await res.json();
+            log('info', 'API', 'API回應: success='+json.success+', count='+(json.data?.length||0));
+            
+            if(json.success && json.data.length > 0){
+                // 統計建議
+                const sellCount = json.data.filter(d => d.recommendation === 'sell').length;
+                const holdCount = json.data.filter(d => d.recommendation === 'hold').length;
+                const buyCount = json.data.filter(d => d.recommendation === 'buy').length;
+                
+                log('info', '分析', '統計: 賣出='+sellCount+', 續抱='+holdCount+', 買入='+buyCount);
+                
+                if(sellCount > 0){
+                    showWarning('分析完成', `${sellCount}檔建議賣出，${holdCount}檔建議續抱`);
+                }else{
+                    showSuccess('分析完成', `${holdCount}檔建議續抱`);
+                }
+                
+                document.getElementById('analyzeCode').textContent = '全部持股 ('+json.data.length+'檔)';
+                let html = '<div class="table-responsive"><table class="table table-hover"><thead><tr><th>ID</th><th>代碼</th><th>名稱</th><th>現價</th><th>損益%</th><th>漲跌幅%</th><th>MA5</th><th>MA20</th><th>RSI</th><th>建議</th><th>原因</th></tr></thead><tbody>';
+                json.data.forEach(d => {
+                    const recClass = d.recommendation === 'sell' ? 'text-danger' : d.recommendation === 'buy' ? 'text-success' : 'text-warning';
+                    const recText = d.recommendation === 'sell' ? '賣出' : d.recommendation === 'buy' ? '買入' : '續抱';
                     html += `<tr>
-                        <td>${stock.code || ''}</td>
-                        <td>${stock.name || ''}</td>
-                        <td>${stock.current_price ? '$' + stock.current_price : 'N/A'}</td>
-                        <td class="${priceClass}">${changePct}%</td>
-                        <td>${stock.target_price || 'N/A'}</td>
-                        <td><button onclick="deleteWatchlist('${stock.code}')" style="background:#f87171;padding:5px 10px;border:none;border-radius:3px;cursor:pointer;">🗑️</button></td>
+                        <td><b>${d.code}</b> ${d.name||''}</td>
+                        <td>${d.current_price||'-'}</td>
+                        <td class="${(d.profit_loss_pct||0)>=0?'text-success':'text-danger'}">${(d.profit_loss_pct||0)>=0?'+':''}${d.profit_loss_pct?.toFixed(2)||'-'}%</td>
+                        <td class="${(d.change_pct||0)>=0?'text-danger':'text-success'}">${(d.change_pct||0)>=0?'+':''}${d.change_pct?.toFixed(2)||'-'}%</td>
+                        <td>${d.ma5||'-'}</td>
+                        <td>${d.ma20||'-'}</td>
+                        <td>${d.rsi||'-'}</td>
+                        <td class="${recClass}">${recText}</td>
+                        <td>${d.reason||''}</td>
                     </tr>`;
                 });
-                document.getElementById('watchlist-list').innerHTML = html;
-            } catch (e) {
-                showError('watchlist-list', '載入失敗: ' + e.message);
+                html += '</tbody></table></div>';
+                document.getElementById('analyzeContent').innerHTML = html;
+                const modal = new bootstrap.Modal(document.getElementById('analyzeModal'));
+                modal.show();
+            }else{
+                showError('無持股資料');
+                alert('無持股資料');
             }
+        }catch(e){
+            alert('分析失敗：'+e.message);
         }
-        
-        // 更新觀察名單股價
-        async function refreshWatchlistPrices() {
-            try {
-                await fetch('/api/watchlist/update_all_prices', { method: 'POST' });
-                loadWatchlist();
-                alert('股價更新完成');
-            } catch (e) {
-                alert('更新失敗: ' + e.message);
-            }
-        }
-        
-        // 新增觀察
-        async function addWatchlist() {
-            const code = document.getElementById('watchlist-code').value;
-            const name = document.getElementById('watchlist-name').value;
-            const target_price = document.getElementById('watchlist-target').value;
+    }
+        modal.show();
+    }
+
+    async function loadWatchlist(){
+        try{
+            // 顯示更新訊息
+            showInfo('觀察名單', '正在更新報價...');
             
-            if (!code) {
-                alert('請填寫股票代碼');
-                return;
-            }
+            // 先呼叫更新股價 API
+            try{
+                await fetch('/api/watchlist/update_all_prices', {method:'POST'});
+            }catch(e){ console.log('更新股價失敗', e); }
             
-            try {
-                await fetch('/api/watchlist', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ code, name, target_price })
-                });
-                
-                document.getElementById('watchlist-code').value = '';
-                document.getElementById('watchlist-name').value = '';
-                document.getElementById('watchlist-target').value = '';
-                
-                loadWatchlist();
-            } catch (e) {
-                alert('新增失敗: ' + e.message);
+            const resp = await fetch('/api/watchlist?t=' + Date.now());
+            watchlistData = await resp.json();
+            let html = ''; watchlistData.forEach(s => {
+                const cc = (s.change_pct||0)>=0?'price-up':'price-down';
+                html += `<tr><td><b>${s.code}</b></td><td>${s.name||''}</td><td>${s.current_price||'-'}</td><td>${s.target_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.reason||''}</td><td>${s.add_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editWatchlist('${s.code}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteWatchlist('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+            });
+            document.querySelector('#watchlistTable tbody').innerHTML = html || '<tr><td colspan="8" class="text-center">無觀察名單</td></tr>';
+            showSuccess('觀察名單', '報價更新完成');
+        }catch(e){ console.error(e); showError('觀察名單', '載入失敗'); }
+    }
+
+    function getStrategyName(id){
+        const names = {'':'-', 'STG001':'KD黃金交叉', 'STG002':'KD死亡交叉', 'STG003':'MA多頭排列', 'STG004':'RSI超賣反彈', 'STG005':'MACD黃金交叉', 'STG006':'價量齊揚', 'STG007':'突破整理平台', 'STG008':'殖利率策略', 'STG009':'營收成長'};
+        return names[id] || id || '-';
+    }
+
+    async function loadTrades(){
+        try{
+            const resp = await fetch('/api/trades?t=' + Date.now());
+            tradesData = await resp.json();
+            let html = ''; tradesData.forEach(t => {
+                const pc = (t.profit_loss||0)>=0?'profit-positive':'profit-negative';
+                const resultClass = t.result==='成功'?'profit-positive':(t.result==='失敗'?'profit-negative':'');
+                html += `<tr><td><b>${t.code}</b> ${t.name||''}</td><td>${t.buy_date||'-'}</td><td>${t.buy_price||'-'}</td><td>${t.shares||'-'}</td><td>${t.sell_date||'-'}</td><td>${t.sell_price||'-'}</td><td class="${pc}">${(t.profit_loss||0)>=0?'+':''}${(t.profit_loss||0).toFixed(2)}</td><td class="${resultClass}">${t.result||'-'}</td><td>${t.discipline||'-'}</td><td>${getStrategyName(t.entry_strategy_id)}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editTrade('${t.id}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteTrade('${t.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
+            });
+            document.querySelector('#tradesTable tbody').innerHTML = html || '<tr><td colspan="11" class="text-center">無交易紀錄</td></tr>';
+        }catch(e){ console.error(e); }
+    }
+
+    async function loadAnalysis(){
+        try{
+            const resp = await fetch('/api/trade_analysis');
+            const a = await resp.json();
+            document.getElementById('winRate').textContent = (a.success_rate||0).toFixed(1)+'%';
+            const disc = a.discipline_analysis||{};
+            if(Object.keys(disc).length>0 && !disciplineChart){
+                const ctx = document.getElementById('disciplineChart').getContext('2d');
+                disciplineChart = new Chart(ctx, {type:'bar', data:{labels:Object.keys(disc), datasets:[{label:'成功率%', data:Object.values(disc).map(d=>d.success_rate||0), backgroundColor:['#4CAF50','#FFC107','#F44336']}]}, options:{responsive:true}});
             }
-        }
-        
-        // 刪除觀察
-        async function deleteWatchlist(code) {
-            if (!confirm(`確定要刪除 ${code} 嗎？`)) return;
-            try {
-                await fetch(`/api/watchlist/${code}`, { method: 'DELETE' });
-                loadWatchlist();
-            } catch (e) {
-                alert('刪除失敗: ' + e.message);
+            let html = `<p>總交易: ${a.total_trades||0} | 成功: ${a.success_count||0} | 失敗: ${a.failure_count||0}</p>`;
+            for(const[lvl,d]of Object.entries(disc)) html += `<div><b>${lvl}</b>: ${d.count}筆, 成功率${(d.success_rate||0).toFixed(1)}%</div>`;
+            document.getElementById('disciplineStats').innerHTML = html;
+            const strat = a.strategy_analysis||{};
+    const strategyNames = {'':'-', 'STG001':'KD黃金交叉', 'STG002':'KD死亡交叉', 'STG003':'MA多頭排列', 'STG004':'RSI超賣反彈', 'STG005':'MACD黃金交叉', 'STG006':'價量齊揚', 'STG007':'突破整理平台', 'STG008':'殖利率策略', 'STG009':'營收成長'};
+            if(Object.keys(strat).length>0 && !strategyChart){
+                const ctx = document.getElementById('strategyChart').getContext('2d');
+                const labels = Object.keys(strat).map(id => strategyNames[id] || id);
+                strategyChart = new Chart(ctx, {type:'bar', data:{labels:labels, datasets:[{label:'平均報酬%', data:Object.values(strat).map(d=>d.avg_profit_loss_pct||0), backgroundColor:Object.values(strat).map(d=>(d.avg_profit_loss_pct||0)>=0?'#4CAF50':'#F44336')}]}, options:{responsive:true}});
             }
+        }catch(e){ console.error(e); }
+    }
+
+    async function reAnalyze(){
+        disciplineChart = null; strategyChart = null; monthlyChart = null;
+        await loadAnalysis();
+    }
+
+    async function loadStrongStocks(){
+        document.querySelector('#strongStocksTable tbody').innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> 載入中...</td></tr>';
+        try{
+            const targetDate = document.getElementById('strongDate').value;
+            const url = targetDate ? `/api/strong_stocks?date=${targetDate}` : '/api/strong_stocks';
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
+            const resp = await fetch(url, {signal: controller.signal});
+            clearTimeout(timeoutId);
+            const stocks = await resp.json();
+            let html = ''; stocks.forEach((s,i) => {
+                const mc = (s.momentum_5d||0)>=0?'profit-positive':'profit-negative';
+                const cc = (s.change_pct||0)>=0?'price-up':'price-down';
+                html += `<tr><td>${i+1}</td><td><b>${s.code}</b></td><td>${s.name||''}</td><td>${s.industry||''}</td><td>${s.price||'-'}</td><td class="${mc}">${(s.momentum_5d||0).toFixed(2)}%</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td></tr>`;
+            });
+            document.querySelector('#strongStocksTable tbody').innerHTML = html || '<tr><td colspan="6" class="text-center">無資料</td></tr>';
+        }catch(e){ 
+            console.error(e); 
+            document.querySelector('#strongStocksTable tbody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">載入超時，請稍後再試</td></tr>';
         }
-        
-        // 初始化
-        loadMarket();
-        loadStrongStocks();
-        loadTopGainers();
-        loadPortfolio();
-        loadWatchlist();
-        
-        // v1.1: 每 60 秒自動更新所有數據
-        setInterval(() => {
-            autoRefreshCount++;
-            document.getElementById('autoRefreshCount').textContent = autoRefreshCount;
-            loadMarket();
-            loadStrongStocks();
-            loadTopGainers();
-            loadPortfolio();
-            loadWatchlist();
-        }, 60000);
+    }
+
+    async function loadStockSelect(){
+        try{
+            const resp = await fetch('/api/portfolio');
+            const stocks = await resp.json();
+            const select = document.getElementById('stockSelect');
+            select.innerHTML = '<option value="">選擇股票...</option>';
+            stocks.forEach(s => select.innerHTML += `<option value="${s.code}">${s.code} ${s.name}</option>`);
+            select.addEventListener('change', loadStockChart);
+        }catch(e){ console.error(e); }
+    }
+
+    async function loadStockChart(){
+        const code = document.getElementById('stockSelect').value; if(!code) return;
+        try{
+            const resp = await fetch('/api/stock/'+code);
+            const data = await resp.json(); if(!data||!data.prices){ alert('無法取得資料'); return; }
+            const chartType = document.getElementById('chartType').value;
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if(mainChart) mainChart.destroy();
+            let chartData={}, chartOptions={responsive:true, maintainAspectRatio:false};
+            if(chartType==='price'){
+                chartData = {labels:data.labels, datasets:[{label:'股價', data:data.prices, borderColor:'#1a73e8'},{label:'MA5', data:data.ma5, borderColor:'#34a853', borderDash:[5,5]},{label:'MA20', data:data.ma20, borderColor:'#fbbc04', borderDash:[5,5]}]};
+            }else if(chartType==='rsi'){
+                chartData = {labels:data.labels, datasets:[{label:'RSI', data:data.rsi, borderColor:'#9c27b0'}]};
+                chartOptions.scales = {y:{min:0,max:100}};
+            }else if(chartType==='kdj'){
+                chartData = {labels:data.labels, datasets:[{label:'K', data:data.k, borderColor:'#1a73e8'},{label:'D', data:data.d, borderColor:'#ea4335'}]};
+            }else if(chartType==='macd'){
+                chartData = {labels:data.labels, datasets:[{label:'MACD', data:data.macd, borderColor:'#1a73e8'},{label:'Signal', data:data.signal, borderColor:'#fbbc04'}]};
+            }else if(chartType==='ma'){
+                chartData = {labels:data.labels, datasets:[{label:'MA5', data:data.ma5, borderColor:'#34a853'},{label:'MA20', data:data.ma20, borderColor:'#fbbc04'},{label:'MA60', data:data.ma60, borderColor:'#ea4335'}]};
+            }
+            mainChart = new Chart(ctx, {type:'line', data:chartData, options:chartOptions});
+        }catch(e){ console.error(e); alert('載入失敗'); }
+    }
+
+    function showAddPortfolio(){
+        document.getElementById('modalTitle').textContent = '新增持股';
+        document.getElementById('modalBody').innerHTML = `
+            <div class="row"><div class="col mb-2"><label>股票代碼</label><input class="form-control" id="pCode" onchange="fetchStockInfo(this.value)"></div><div class="col mb-2"><label>股票名稱</label><input class="form-control" id="pName"></div></div>
+            <div class="row"><div class="col mb-2"><label>成本價</label><input class="form-control" id="pCost" type="number"></div><div class="col mb-2"><label>股數</label><input class="form-control" id="pShares" type="number" value="1000"></div></div>
+            <div class="row"><div class="col mb-2"><label>停損價</label><input class="form-control" id="pStopLoss" type="number"></div><div class="col mb-2"><label>停利價</label><input class="form-control" id="pStopProfit" type="number"></div></div>
+            <div class="row"><div class="col mb-2"><label>產業</label><select class="form-control" id="pIndustry"><option value="">請選擇...</option><option value="半導體">半導體</option><option value="IC設計">IC設計</option><option value="電子">電子</option><option value="光電">光電</option><option value="通訊">通訊</option><option value="航太">航太</option><option value="散熱">散熱</option><option value="氣動">氣動</option><option value="電源">電源</option><option value="其他">其他</option></select></div><div class="col mb-2"><label>應用</label><select class="form-control" id="pApplication"><option value="">請選擇...</option><option value="AI/高效能運算">AI/高效能運算</option><option value="AI伺服器">AI伺服器</option><option value="AI/手機晶片">AI/手機晶片</option><option value="AI/顯示驅動">AI/顯示驅動</option><option value="AI先進封裝">AI先進封裝</option><option value="AI/周邊晶片">AI/周邊晶片</option><option value="IC通路">IC通路</option><option value="光通訊">光通訊</option><option value="飛機維修">飛機維修</option><option value="自動化設備">自動化設備</option><option value="資料中心需求">資料中心需求</option><option value="PC/AI">PC/AI</option><option value="蘋果供應鏈">蘋果供應鏈</option><option value="車用">車用</option><option value="其他">其他</option></select></div></div>
+            <div class="mb-2"><label>買入日期</label><input class="form-control" id="pBuyDate" type="date"></div>
+        `;
+        document.getElementById('modalSave').onclick = async () => {
+            const code = document.getElementById('pCode').value;
+            const data = {code:code, name:document.getElementById('pName').value, cost:parseFloat(document.getElementById('pCost').value), shares:parseInt(document.getElementById('pShares').value), stop_loss:parseFloat(document.getElementById('pStopLoss').value), stop_profit:parseFloat(document.getElementById('pStopProfit').value), industry:document.getElementById('pIndustry').value, application:document.getElementById('pApplication').value, buy_date:document.getElementById('pBuyDate').value};
+            const resp = await fetch('/api/portfolio/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            const result = await resp.json();
+            if(result.success){
+                modal.hide(); 
+                // 新增後呼叫分析API來取得並儲存現價
+                setTimeout(async () => {
+                    try{
+                        const analyzeRes = await fetch('/api/portfolio/analyze/'+code);
+                        const analyzeResult = await analyzeRes.json();
+                        if(analyzeResult.success && analyzeResult.data){
+                            showSuccess('已新增 '+code, '現價: '+analyzeResult.data.current_price);
+                        }else{
+                            showWarning('已新增 '+code, '但無法取得現價');
+                        }
+                    }catch(e){
+                        showWarning('已新增 '+code, '但無法取得現價');
+                    }
+                    loadPortfolio();
+                }, 500);
+            }else{
+                alert('儲存失敗: ' + (result.error || '未知錯誤'));
+            }
+        };
+        modal.show();
+    }
+
+    function fetchStockInfo(code){
+        // 自動帶入股票名稱和產業（如果有快取資料）
+        const stockMap = {
+            '2330': {name:'台積電', industry:'半導體', application:'AI/高效能運算'},
+            '2454': {name:'聯發科', industry:'IC設計', application:'AI/手機晶片'},
+            '2317': {name:'鴻海', industry:'電子', application:'AI伺服器/蘋果供應鏈'},
+            '2382': {name:'廣達', industry:'電子', application:'AI伺服器'},
+            '3711': {name:'日月光', industry:'半導體', application:'AI先進封裝'},
+            '3034': {name:'聯詠', industry:'IC設計', application:'AI/顯示驅動'},
+            '4952': {name:'凌通', industry:'IC設計', application:'AI/周邊晶片'},
+            '3017': {name:'奇鋐', industry:'散熱', application:'AI伺服器/車用'},
+            '3231': {name:'緯創', industry:'電子', application:'AI伺服器'},
+            '2356': {name:'英業達', industry:'電子', application:'AI伺服器'},
+            '2353': {name:'宏碁', industry:'電子', application:'PC/AI'},
+            '6282': {name:'康舒', industry:'電源', application:'電源供應器'},
+            '4909': {name:'新復興', industry:'通訊', application:'光纖/網通'},
+            '4908': {name:'前鼎', industry:'光電', application:'光通訊'},
+            '4977': {name:'眾達-KY', industry:'光電', application:'資料中心需求'},
+            '1590': {name:'亞德客-KY', industry:'氣動', application:'自動化設備'},
+            '2630': {name:'亞航', industry:'航太', application:'飛機維修'},
+            '8112': {name:'至上', industry:'半導體', application:'IC通路'},
+            '2374': {name:'佳能', industry:'光電', application:'光學鏡頭'}
+        };
+        if(stockMap[code]){
+            document.getElementById('pName').value = stockMap[code].name;
+            document.getElementById('pIndustry').value = stockMap[code].industry;
+            document.getElementById('pApplication').value = stockMap[code].application;
+        }
+    }
+
+    function showAddWatchlist(){
+        document.getElementById('modalTitle').textContent = '新增觀察名單';
+        document.getElementById('modalBody').innerHTML = `
+            <div class="row"><div class="col mb-2"><label>股票代碼</label><input class="form-control" id="wCode" onchange="fetchWatchlistInfo(this.value)"></div><div class="col mb-2"><label>股票名稱</label><input class="form-control" id="wName"></div></div>
+            <div class="row"><div class="col mb-2"><label>目標價</label><input class="form-control" id="wTarget" type="number"></div><div class="col mb-2"><label>產業</label><select class="form-control" id="wIndustry"><option value="">請選擇...</option><option value="半導體">半導體</option><option value="IC設計">IC設計</option><option value="電子">電子</option><option value="光電">光電</option><option value="通訊">通訊</option><option value="航太">航太</option><option value="散熱">散熱</option><option value="氣動">氣動</option><option value="電源">電源</option><option value="其他">其他</option></select></div></div>
+            <div class="row"><div class="col mb-2"><label>追蹤原因</label><textarea class="form-control" id="wReason"></textarea></div><div class="col mb-2"><label>新增日期</label><input class="form-control" id="wAddDate" type="date"></div></div>
+        `;
+        document.getElementById('modalSave').onclick = async () => {
+            const data = {code:document.getElementById('wCode').value, name:document.getElementById('wName').value, target_price:parseFloat(document.getElementById('wTarget').value), reason:document.getElementById('wReason').value, industry:document.getElementById('wIndustry').value, add_date:document.getElementById('wAddDate').value || new Date().toISOString().split('T')[0]};
+            const resp = await fetch('/api/watchlist/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            const result = await resp.json();
+            if(result.success){
+                modal.hide(); 
+                setTimeout(() => { loadWatchlist(); }, 100);
+            }else{
+                alert('儲存失敗: ' + (result.error || '未知錯誤'));
+            }
+        };
+        modal.show();
+    }
+
+    function fetchWatchlistInfo(code){
+        const stockMap = {
+            '2330': {name:'台積電', industry:'半導體'},
+            '2454': {name:'聯發科', industry:'IC設計'},
+            '2317': {name:'鴻海', industry:'電子'},
+            '2382': {name:'廣達', industry:'電子'},
+            '3711': {name:'日月光', industry:'半導體'},
+            '3034': {name:'聯詠', industry:'IC設計'},
+            '4952': {name:'凌通', industry:'IC設計'},
+            '3017': {name:'奇鋐', industry:'散熱'},
+            '3231': {name:'緯創', industry:'電子'},
+            '2356': {name:'英業達', industry:'電子'},
+            '2353': {name:'宏碁', industry:'電子'},
+            '6282': {name:'康舒', industry:'電源'},
+            '4909': {name:'新復興', industry:'通訊'},
+            '4908': {name:'前鼎', industry:'光電'},
+            '4977': {name:'眾達-KY', industry:'光電'},
+            '1590': {name:'亞德客-KY', industry:'氣動'},
+            '2630': {name:'亞航', industry:'航太'},
+            '8112': {name:'至上', industry:'半導體'},
+            '2374': {name:'佳能', industry:'光電'}
+        };
+        if(stockMap[code]){
+            document.getElementById('wName').value = stockMap[code].name;
+            document.getElementById('wIndustry').value = stockMap[code].industry;
+        }
+    }
+
+    function editWatchlist(code){
+        const s = watchlistData.find(x => x.code === code); if(!s) return;
+        document.getElementById('modalTitle').textContent = '編輯觀察名單 - '+code;
+        document.getElementById('modalBody').innerHTML = `
+            <div class="row"><div class="col mb-2"><label>股票代碼</label><input class="form-control" value="${s.code}" disabled></div><div class="col mb-2"><label>股票名稱</label><input class="form-control" id="wName" value="${s.name||''}"></div></div>
+            <div class="row"><div class="col mb-2"><label>目標價</label><input class="form-control" id="wTarget" type="number" value="${s.target_price||''}"></div><div class="col mb-2"><label>產業</label><select class="form-control" id="wIndustry"><option value="">請選擇...</option><option value="半導體" ${s.industry=='半導體'?'selected':''}>半導體</option><option value="IC設計" ${s.industry=='IC設計'?'selected':''}>IC設計</option><option value="電子" ${s.industry=='電子'?'selected':''}>電子</option><option value="光電" ${s.industry=='光電'?'selected':''}>光電</option><option value="通訊" ${s.industry=='通訊'?'selected':''}>通訊</option><option value="航太" ${s.industry=='航太'?'selected':''}>航太</option><option value="散熱" ${s.industry=='散熱'?'selected':''}>散熱</option><option value="氣動" ${s.industry=='氣動'?'selected':''}>氣動</option><option value="電源" ${s.industry=='電源'?'selected':''}>電源</option><option value="其他" ${s.industry=='其他'?'selected':''}>其他</option></select></div></div>
+            <div class="row"><div class="col mb-2"><label>追蹤原因</label><textarea class="form-control" id="wReason">${s.reason||''}</textarea></div><div class="col mb-2"><label>新增日期</label><input class="form-control" id="wAddDate" type="date" value="${s.add_date||''}"></div></div>
+        `;
+        document.getElementById('modalSave').onclick = async () => {
+            const data = {code: code, name: document.getElementById('wName').value, target_price: parseFloat(document.getElementById('wTarget').value), reason: document.getElementById('wReason').value, industry: document.getElementById('wIndustry').value, add_date: document.getElementById('wAddDate').value};
+            await fetch('/api/watchlist/update/'+code, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            modal.hide(); loadWatchlist();
+        };
+        modal.show();
+    }
+
+    function showAddTrade(){
+        document.getElementById('modalTitle').textContent = '新增交易紀錄';
+        document.getElementById('modalBody').innerHTML = `
+            <div class="row"><div class="col mb-2"><label>股票代碼</label><input class="form-control" id="tCode"></div><div class="col mb-2"><label>股票名稱</label><input class="form-control" id="tName"></div></div>
+            <div class="row"><div class="col mb-2"><label>買入日期</label><input class="form-control" id="tBuyDate" type="date"></div><div class="col mb-2"><label>買入價格</label><input class="form-control" id="tBuyPrice" type="number"></div></div>
+            <div class="row"><div class="col mb-2"><label>賣出日期</label><input class="form-control" id="tSellDate" type="date"></div><div class="col mb-2"><label>賣出價格</label><input class="form-control" id="tSellPrice" type="number"></div></div>
+            <div class="row"><div class="col mb-2"><label>股數</label><input class="form-control" id="tShares" type="number" value="1000"></div><div class="col mb-2"><label>紀律</label><select class="form-control" id="tDiscipline"><option>完全遵守</option><option>部分遵守</option><option>未遵守</option></select></div></div>
+            <div class="row"><div class="col mb-2"><label>結果</label><select class="form-control" id="tResult"><option value="">待平倉</option><option>成功</option><option>失敗</option><option>持平</option></select></div><div class="col mb-2"><label>策略</label><select class="form-control" id="tStrategy"><option value="">請選擇...</option><option value="STG001">KD黃金交叉</option><option value="STG002">KD死亡交叉</option><option value="STG003">MA多頭排列</option><option value="STG004">RSI超賣反彈</option><option value="STG005">MACD黃金交叉</option><option value="STG006">價量齊揚</option><option value="STG007">突破整理平台</option><option value="STG008">殖利率策略</option><option value="STG009">營收成長</option></select></div></div>
+        `;
+        document.getElementById('modalSave').onclick = async () => {
+            const data = {code:document.getElementById('tCode').value, name:document.getElementById('tName').value, type:'買入', buy_date:document.getElementById('tBuyDate').value, buy_price:parseFloat(document.getElementById('tBuyPrice').value), sell_date:document.getElementById('tSellDate').value, sell_price:parseFloat(document.getElementById('tSellPrice').value), shares:parseInt(document.getElementById('tShares').value), discipline:document.getElementById('tDiscipline').value, result:document.getElementById('tResult').value, entry_strategy_id:document.getElementById('tStrategy').value};
+            await fetch('/api/trade/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            modal.hide(); loadTrades(); loadAnalysis();
+        };
+        modal.show();
+    }
+
+    function editTrade(id){
+        const t = tradesData.find(x => x.id == id); if(!t) return;
+        document.getElementById('modalTitle').textContent = '編輯交易紀錄 - '+t.code;
+        document.getElementById('modalBody').innerHTML = `
+            <div class="row"><div class="col mb-2"><label>股票代碼</label><input class="form-control" id="tCode" value="${t.code}"></div><div class="col mb-2"><label>股票名稱</label><input class="form-control" id="tName" value="${t.name||''}"></div></div>
+            <div class="row"><div class="col mb-2"><label>買入日期</label><input class="form-control" id="tBuyDate" type="date" value="${t.buy_date||''}"></div><div class="col mb-2"><label>買入價格</label><input class="form-control" id="tBuyPrice" type="number" value="${t.buy_price||''}"></div></div>
+            <div class="row"><div class="col mb-2"><label>賣出日期</label><input class="form-control" id="tSellDate" type="date" value="${t.sell_date||''}"></div><div class="col mb-2"><label>賣出價格</label><input class="form-control" id="tSellPrice" type="number" value="${t.sell_price||''}"></div></div>
+            <div class="row"><div class="col mb-2"><label>股數</label><input class="form-control" id="tShares" type="number" value="${t.shares||1000}"></div><div class="col mb-2"><label>紀律</label><select class="form-control" id="tDiscipline"><option ${t.discipline=='完全遵守'?'selected':''}>完全遵守</option><option ${t.discipline=='部分遵守'?'selected':''}>部分遵守</option><option ${t.discipline=='未遵守'?'selected':''}>未遵守</option></select></div></div>
+            <div class="row"><div class="col mb-2"><label>結果</label><select class="form-control" id="tResult"><option ${t.result==''?'selected':''} value="">待平倉</option><option ${t.result=='成功'?'selected':''}>成功</option><option ${t.result=='失敗'?'selected':''}>失敗</option><option ${t.result=='持平'?'selected':''}>持平</option></select></div><div class="col mb-2"><label>策略</label><select class="form-control" id="tStrategy"><option value="">請選擇...</option><option value="STG001" ${t.entry_strategy_id=='STG001'?'selected':''}>KD黃金交叉</option><option value="STG002" ${t.entry_strategy_id=='STG002'?'selected':''}>KD死亡交叉</option><option value="STG003" ${t.entry_strategy_id=='STG003'?'selected':''}>MA多頭排列</option><option value="STG004" ${t.entry_strategy_id=='STG004'?'selected':''}>RSI超賣反彈</option><option value="STG005" ${t.entry_strategy_id=='STG005'?'selected':''}>MACD黃金交叉</option><option value="STG006" ${t.entry_strategy_id=='STG006'?'selected':''}>價量齊揚</option><option value="STG007" ${t.entry_strategy_id=='STG007'?'selected':''}>突破整理平台</option><option value="STG008" ${t.entry_strategy_id=='STG008'?'selected':''}>殖利率策略</option><option value="STG009" ${t.entry_strategy_id=='STG009'?'selected':''}>營收成長</option></select></div></div>
+        `;
+        document.getElementById('modalSave').onclick = async () => {
+            const data = {code:document.getElementById('tCode').value, name:document.getElementById('tName').value, buy_date:document.getElementById('tBuyDate').value, buy_price:parseFloat(document.getElementById('tBuyPrice').value), sell_date:document.getElementById('tSellDate').value, sell_price:parseFloat(document.getElementById('tSellPrice').value), shares:parseInt(document.getElementById('tShares').value), discipline:document.getElementById('tDiscipline').value, result:document.getElementById('tResult').value, entry_strategy_id:document.getElementById('tStrategy').value};
+            await fetch('/api/trade/update/'+id, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            modal.hide(); loadTrades(); loadAnalysis();
+        };
+        modal.show();
+    }
+
+    async function deletePortfolio(code){ if(confirm('確定刪除?')){ await fetch('/api/portfolio/delete/'+code,{method:'POST'}); loadPortfolio(); }}
+    async function deleteWatchlist(code){ if(confirm('確定刪除?')){ await fetch('/api/watchlist/delete/'+code,{method:'POST'}); loadWatchlist(); }}
+    async function deleteTrade(id){ if(confirm('確定刪除?')){ await fetch('/api/trade/delete/'+id,{method:'POST'}); loadTrades(); loadAnalysis(); }}
+
+    async function exportPortfolio(){ 
+        const resp = await fetch('/api/export/portfolio'); 
+        const data = await resp.json();
+        if(data.data){
+            const a = document.createElement('a'); a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + data.data; a.download = data.filename || 'portfolio.xlsx'; a.click();
+        }else{ alert('匯出失敗'); }
+    }
+    async function downloadBackup(){
+        const resp = await fetch('/api/backup');
+        const data = await resp.json();
+        if(data.success && data.data){
+            const a = document.createElement('a'); a.href = 'data:application/octet-stream;base64,' + data.data; a.download = data.filename || 'backup.db'; a.click();
+            alert('備份下載成功！');
+        }else{ alert('備份失敗: ' + (data.error || '未知錯誤')); }
+    }
+    async function exportTrades(){ 
+        const resp = await fetch('/api/export/trades'); 
+        const data = await resp.json();
+        if(data.data){
+            const a = document.createElement('a'); a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + data.data; a.download = data.filename || 'trades.xlsx'; a.click();
+        }else{ alert('匯出失敗'); }
+    }
+    async function exportWatchlist(){ 
+        const resp = await fetch('/api/export/watchlist'); 
+        const data = await resp.json();
+        if(data.data){
+            const a = document.createElement('a'); a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + data.data; a.download = data.filename || 'watchlist.xlsx'; a.click();
+        }else{ alert('匯出失敗'); }
+    }
+    async function importTrades(input){ 
+        const file = input.files[0]; if(!file) return;
+        const reader = new FileReader(); reader.onload = async () => {
+            const b64 = reader.result.split(',')[1];
+            const resp = await fetch('/api/import/trades', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({data:b64})});
+            const result = await resp.json();
+            if(result.success){ loadTrades(); loadAnalysis(); alert('匯入成功!'); }else{ alert('匯入失敗: '+result.error); }
+        }; reader.readAsDataURL(file);
+    }
+    async function importPortfolio(input){ 
+        const file = input.files[0]; if(!file) return;
+        const reader = new FileReader(); reader.onload = async () => {
+            const b64 = reader.result.split(',')[1];
+            const resp = await fetch('/api/import/portfolio', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({data:b64})});
+            const result = await resp.json();
+            if(result.success){ loadPortfolio(); alert('匯入成功!'); }else{ alert('匯入失敗: '+result.error); }
+        }; reader.readAsDataURL(file);
+    }
+    async function importWatchlist(input){ 
+        const file = input.files[0]; if(!file) return;
+        const reader = new FileReader(); reader.onload = async () => {
+            const b64 = reader.result.split(',')[1];
+            const resp = await fetch('/api/import/watchlist', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({data:b64})});
+            const result = await resp.json();
+            if(result.success){ loadWatchlist(); alert('匯入成功!'); }else{ alert('匯入失敗: '+result.error); }
+        }; reader.readAsDataURL(file);
+    }
+    async function generateSample(){ await fetch('/api/sample/generate',{method:'POST'}); loadTrades(); loadAnalysis(); alert('已產生5筆範例交易資料!'); }
+
+    document.addEventListener('DOMContentLoaded', loadAll);
     </script>
 </body>
 </html>
