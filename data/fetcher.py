@@ -352,7 +352,7 @@ class TaiwanStockScreener:
         strong_stocks = []
         
         # 測試所有熱門股票
-        for i, stock in enumerate(stocks[:30]):
+        for i, stock in enumerate(stocks):
             stock_id = stock.get('stock_id')
             stock_name = stock.get('stock_name', '')
             
