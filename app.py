@@ -560,6 +560,72 @@ def api_import_watchlist():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/import/portfolio', methods=['POST'])
+def api_import_portfolio():
+    """匯入持股"""
+    try:
+        import pandas as pd
+        data = request.json
+        b64_data = data.get('data', '')
+        if not b64_data:
+            return jsonify({'success': False, 'error': '無檔案資料'})
+        
+        # 解碼 Base64
+        excel_data = base64.b64decode(b64_data)
+        df = pd.read_excel(io.BytesIO(excel_data))
+        
+        # 支援的中文/英文欄位名稱映射
+        col_map = {
+            'code': ['股票代碼', 'code', 'Code', '代碼'],
+            'name': ['股票名稱', 'name', 'Name', '名稱'],
+            'cost': ['成本', 'cost', 'Cost', '買入價'],
+            'shares': ['股數', 'shares', 'Shares', '數量'],
+            'stop_loss': ['停損', 'stop_loss', 'Stop Loss'],
+            'stop_profit': ['停利', 'stop_profit', 'Stop Profit'],
+            'industry': ['產業', 'industry', 'Industry'],
+            'application': ['應用', 'application', 'Application', '用途'],
+            'buy_date': ['買入日期', 'buy_date', 'Buy Date', '買日']
+        }
+        
+        def get_val(row, keys):
+            for k in keys:
+                if k in row.index:
+                    val = row[k]
+                    if pd.notna(val):
+                        return val
+            return None
+        
+        # 匯入每一筆
+        count = 0
+        errors = []
+        for idx, row in df.iterrows():
+            try:
+                item = {
+                    'code': str(get_val(row, col_map['code']) or ''),
+                    'name': str(get_val(row, col_map['name']) or ''),
+                    'cost': float(get_val(row, col_map['cost']) or 0),
+                    'shares': int(get_val(row, col_map['shares']) or 1000),
+                    'stop_loss': float(get_val(row, col_map['stop_loss']) or 0) or None,
+                    'stop_profit': float(get_val(row, col_map['stop_profit']) or 0) or None,
+                    'industry': str(get_val(row, col_map['industry']) or ''),
+                    'application': str(get_val(row, col_map['application']) or ''),
+                    'buy_date': str(get_val(row, col_map['buy_date']) or '')
+                }
+                
+                if item['code']:
+                    pm.add(item['code'], item)
+                    count += 1
+            except Exception as e:
+                errors.append(f"第{idx+1}筆: {str(e)}")
+        
+        return jsonify({
+            'success': True, 
+            'count': count,
+            'errors': errors[:5] if errors else []
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 # ==================== 排程發送 Telegram ====================
 
 TELEGRAM_TOKEN = '8294937993:AAFOY_rwU33p6ndhFrnDyjKFrSQ-_1KavOE'
