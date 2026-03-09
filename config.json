@@ -1,11 +1,16 @@
 {
   "portfolio": {
+    "2630": {"name": "亞航", "cost": 55, "shares": 1000, "stop_loss": 50, "stop_profit": 70, "industry": "航太", "application": "飛機維修", "buy_date": "2025-01-15"},
+    "8112": {"name": "至上", "cost": 73.9, "shares": 1000, "stop_loss": 65, "stop_profit": 90, "industry": "半導體", "application": "IC通路", "buy_date": "2025-01-20"},
+    "2374": {"name": "佳能", "cost": 83.5, "shares": 1000, "stop_loss": 75, "stop_profit": 100, "industry": "光電", "application": "光學鏡頭", "buy_date": "2025-02-10"},
+    "2356": {"name": "英業達", "cost": 51.5, "shares": 1000, "stop_loss": 45, "stop_profit": 65, "industry": "電子", "application": "AI伺服器", "buy_date": "2025-03-15"},
+    "2353": {"name": "宏碁", "cost": 37, "shares": 1000, "stop_loss": 30, "stop_profit": 50, "industry": "電子", "application": "PC/AI", "buy_date": "2025-03-20"},
+    "3231": {"name": "緯創", "cost": 156, "shares": 1000, "stop_loss": 140, "stop_profit": 190, "industry": "電子", "application": "AI伺服器", "buy_date": "2025-04-01"},
+    "6282": {"name": "康舒", "cost": 50, "shares": 1000, "stop_loss": 45, "stop_profit": 65, "industry": "電源", "application": "電源供應器", "buy_date": "2025-04-10"},
+    "4909": {"name": "新復興", "cost": 61, "shares": 1000, "stop_loss": 55, "stop_profit": 75, "industry": "通訊", "application": "光纖/網通", "buy_date": "2025-04-15"},
     "2331": {"name": "精英", "cost": 27.4, "shares": 1000, "stop_loss": 24, "stop_profit": 35, "industry": "電腦週邊", "application": "主機板/顯示卡"},
-    "5392": {"name": "能率", "cost": 52.6, "shares": 1000, "stop_loss": 47, "stop_profit": 65, "industry": "光電", "application": "鋁合金壓鑄"},
-    "3287": {"name": "廣寰科", "cost": 29.9, "shares": 1000, "stop_loss": 25.5, "stop_profit": 39, "industry": "電腦週邊", "application": "電競耳機/充电器"},
     "2317": {"name": "鴻海", "cost": 224, "shares": 1000, "stop_loss": 200, "stop_profit": 270, "industry": "電子代工", "application": "AI伺服器/蘋果供應鏈"},
-    "00687B": {"name": "國泰20年美債", "cost": 29.35, "shares": 1000, "stop_loss": 28, "stop_profit": 32, "industry": "債券ETF", "application": "美國國債"},
-    "1773": {"name": "勝一", "cost": 147, "shares": 1000, "stop_loss": 130, "stop_profit": 180, "industry": "化學", "application": "有機溶劑"}
+    "00687B": {"name": "國泰20年美債", "cost": 29.35, "shares": 1000, "stop_loss": 28, "stop_profit": 32, "industry": "債券ETF", "application": "美國國債"}
   },
   "watchlist": [
     {"code": "2543", "name": "皇昌", "industry": "營建", "application": "營造工程"},
