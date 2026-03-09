@@ -21,6 +21,5 @@
     "monitor": "09:30,10:30,11:30,13:00,14:00",
     "evening": "15:00"
   },
-  "alert": {"gain_threshold": 10, "loss_threshold": 5},
-  "itick_api_key": "ae7824e15cc34160bfe303310973ea9a77ee3c6b1c314202b2ff1bd23db02729"
+  "alert": {"gain_threshold": 10, "loss_threshold": 5}
 }
