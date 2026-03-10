@@ -77,7 +77,8 @@ def index():
 def api_portfolio():
     portfolio = pm.get_all()
     stocks = []
-    for code, stock in portfolio.items():
+    for stock in portfolio:
+        code = stock.get('code')
         price_data = screener.get_daily_price(code, 1)
         current_price = 0
         change_pct = 0
@@ -376,7 +377,8 @@ def api_export_portfolio():
     """匯出持股"""
     portfolio = pm.get_all()
     data = []
-    for code, stock in portfolio.items():
+    for stock in portfolio:
+        code = stock.get('code')
         data.append({
             '股票代碼': code,
             '股票名稱': stock.get('name', ''),
@@ -651,7 +653,8 @@ def generate_report_message():
         msg += "🛑 <b>持股狀態：</b>\n"
         
         alert_stocks = []
-        for code, stock in list(portfolio.items())[:5]:
+        for stock in portfolio[:5]:
+            code = stock.get('code')
             try:
                 price_data = screener.get_daily_price(code, 1)
                 if price_data:
