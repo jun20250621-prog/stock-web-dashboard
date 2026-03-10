@@ -67,6 +67,76 @@ wm = WatchlistManager(config)
 tj = TradeJournal(config)
 sl = StrategyLibrary(config)
 
+# ==================== Yahoo Finance 工具 ====================
+
+def get_yahoo_price(stock_code: str) -> Optional[Dict]:
+    """使用 Yahoo Finance 取得即時股價"""
+    import urllib.request
+    import json
+    
+    try:
+        # 上市: 2331.TW, 櫃買: 5392.TWO
+        if stock_code.startswith('00') or stock_code.endswith('B'):
+            return None  # ETF 不支援
+        
+        symbol = f"{stock_code}.TW"
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
+        
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        req = urllib.request.Request(url, headers=headers)
+        
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode('utf-8'))
+        except urllib.error.HTTPError:
+            # 嘗試櫃買
+            symbol = f"{stock_code}.TWO"
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode('utf-8'))
+        
+        if 'chart' in data and data['chart']['result']:
+            result = data['chart']['result'][0]
+            meta = result.get('meta', {})
+            quote = result.get('indicators', {}).get('quote', [{}])[0]
+            
+            if not meta.get('regularMarketPrice'):
+                return None
+            
+            current_price = meta.get('regularMarketPrice', 0)
+            prev_close = meta.get('previousClose', meta.get('chartPreviousClose', 0))
+            
+            change = current_price - prev_close
+            change_pct = (change / prev_close * 100) if prev_close else 0
+            
+            # 取得 K 線資料
+            closes = quote.get('close', [])
+            opens = quote.get('open', [])
+            highs = quote.get('high', [])
+            lows = quote.get('low', [])
+            
+            price_data = []
+            for i in range(len(closes)):
+                if closes[i] is not None:
+                    price_data.append({
+                        'close': closes[i],
+                        'open': opens[i] if i < len(opens) and opens[i] else closes[i],
+                        'high': highs[i] if i < len(highs) and highs[i] else closes[i],
+                        'low': lows[i] if i < len(lows) and lows[i] else closes[i],
+                    })
+            
+            return {
+                'price': current_price,
+                'change': change,
+                'change_pct': change_pct,
+                'price_data': price_data
+            }
+    except Exception as e:
+        print(f"Yahoo price error for {stock_code}: {e}")
+    
+    return None
+
 # ==================== 路由 ====================
 
 @app.route('/')
@@ -79,14 +149,15 @@ def api_portfolio():
     stocks = []
     for stock in portfolio:
         code = stock.get('code')
-        price_data = screener.get_daily_price(code, 1)
+        
+        # 使用 Yahoo Finance 取得即時報價
+        yahoo_data = get_yahoo_price(code)
         current_price = 0
         change_pct = 0
-        if price_data:
-            latest = price_data[-1]
-            current_price = latest.get('close', 0)
-            spread = latest.get('spread', 0) or 0
-            change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
+        if yahoo_data:
+            current_price = yahoo_data.get('price', 0)
+            change_pct = yahoo_data.get('change_pct', 0)
+        
         pl = pm.calculate_profit_loss(code, current_price) if current_price > 0 else {'profit_loss': 0, 'profit_loss_pct': 0, 'stop_loss': 0, 'stop_profit': 0}
         stocks.append({
             'code': code,
@@ -113,16 +184,14 @@ def api_watchlist():
         stocks = []
         for item in watchlist:
             code = item.get('code')
-            # 使用與 portfolio 相同的價格取得邏輯
-            price_data = screener.get_daily_price(code, 5)
+            
+            # 使用 Yahoo Finance 取得即時報價
+            yahoo_data = get_yahoo_price(code)
             current_price = 0
             change_pct = 0
-            if price_data and len(price_data) > 0:
-                latest = price_data[-1]
-                current_price = latest.get('close', 0)
-                # 計算漲跌幅 - 使用與 portfolio 相同的方式
-                spread = latest.get('spread', 0) or 0
-                change_pct = (spread / (current_price - spread)) * 100 if current_price > spread else 0
+            if yahoo_data:
+                current_price = yahoo_data.get('price', 0)
+                change_pct = yahoo_data.get('change_pct', 0)
             
             stocks.append({
                 'code': code,
@@ -164,7 +233,11 @@ def api_strategies():
 
 @app.route('/api/stock/<code>')
 def api_stock(code):
-    price_data = screener.get_daily_price(code, 30)
+    yahoo_data = get_yahoo_price(code)
+    price_data = []
+    if yahoo_data and yahoo_data.get('price_data'):
+        price_data = yahoo_data['price_data']
+    
     if price_data and len(price_data) > 0:
         import pandas as pd
         df = pd.DataFrame(price_data)
@@ -656,9 +729,10 @@ def generate_report_message():
         for stock in portfolio[:5]:
             code = stock.get('code')
             try:
-                price_data = screener.get_daily_price(code, 1)
-                if price_data:
-                    current_price = price_data[-1].get('close', 0)
+                # 使用 Yahoo Finance
+                yahoo_data = get_yahoo_price(code)
+                current_price = yahoo_data.get('price', 0) if yahoo_data else 0
+                if current_price > 0:
                     cost = stock.get('cost', 0)
                     if cost > 0:
                         pl_pct = ((current_price - cost) / cost) * 100
