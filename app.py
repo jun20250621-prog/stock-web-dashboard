@@ -13,7 +13,7 @@ import io
 import urllib.request
 import urllib.error
 from datetime import datetime, timezone, timedelta
-from typing import Optional
+from typing import Optional, Dict
 from apscheduler.schedulers.background import BackgroundScheduler
 import threading
 
