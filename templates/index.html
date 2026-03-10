@@ -200,7 +200,7 @@
                 totalValue += (s.current_price||0)*1000; totalCost += (s.cost||0)*1000;
                 const pc = (s.profit_loss||0)>=0?'profit-positive':'profit-negative';
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
-                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                html += `<tr><td style="cursor:pointer;color:#0d6efd;" onclick="viewStockChart('${s.code}')"><b>${s.code}</b> ${s.name||''}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
             document.querySelector('#portfolioTable tbody').innerHTML = html || '<tr><td colspan="10" class="text-center">無持股資料</td></tr>';
             const totalPL = totalValue-totalCost, totalPLPct = totalCost>0?totalPL/totalCost*100:0;
@@ -211,6 +211,13 @@
             document.getElementById('totalPLPct').className = 'value '+(totalPLPct>=0?'profit-positive':'profit-negative');
             document.getElementById('stockCount').textContent = portfolioData.length;
         }catch(e){ console.error(e); }
+    }
+
+    function viewStockChart(code){
+        // 切換到技術圖 tab 並載入 K 線圖
+        document.querySelector('[data-bs-target="#chart"]').click();
+        document.getElementById('stockSelect').value = code;
+        loadStockChart();
     }
 
     function editPortfolio(code){
@@ -237,7 +244,7 @@
             watchlistData = await resp.json();
             let html = ''; watchlistData.forEach(s => {
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
-                html += `<tr><td><b>${s.code}</b> ${s.name||''}</td><td>${s.current_price||'-'}</td><td>${s.target_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.reason||''}</td><td>${s.add_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editWatchlist('${s.code}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteWatchlist('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                html += `<tr><td style="cursor:pointer;color:#0d6efd;" onclick="viewStockChart('${s.code}')"><b>${s.code}</b> ${s.name||''}</td><td>${s.current_price||'-'}</td><td>${s.target_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.reason||''}</td><td>${s.add_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editWatchlist('${s.code}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteWatchlist('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
             document.querySelector('#watchlistTable tbody').innerHTML = html || '<tr><td colspan="8" class="text-center">無觀察名單</td></tr>';
         }catch(e){ console.error(e); }
