@@ -315,6 +315,12 @@ def api_portfolio_add():
         code = data.get('code')
         if not code:
             return jsonify({'success': False, 'error': 'Missing code'}), 400
+        
+        # 檢查是否已存在
+        existing = pm.get_all()
+        if any(s.get('code') == code for s in existing):
+            return jsonify({'success': False, 'error': f'股票 {code} 已經存在，不能重複新增'}), 400
+        
         pm.add(code, data)
         reload_config()
         return jsonify({'success': True})
@@ -343,6 +349,13 @@ def api_portfolio_delete(code):
 def api_watchlist_add():
     try:
         data = request.json
+        code = data.get('code')
+        
+        # 檢查是否已存在
+        existing = wm.get_all()
+        if any(item.get('code') == code for item in existing):
+            return jsonify({'success': False, 'error': f'股票 {code} 已經在觀察名單中'}), 400
+        
         wm.add(data)
         reload_config()
         return jsonify({'success': True})

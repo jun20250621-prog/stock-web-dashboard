@@ -361,8 +361,13 @@
         `;
         document.getElementById('modalSave').onclick = async () => {
             const data = {code:document.getElementById('pCode').value, name:document.getElementById('pName').value, cost:parseFloat(document.getElementById('pCost').value), shares:parseInt(document.getElementById('pShares').value), stop_loss:parseFloat(document.getElementById('pStopLoss').value), stop_profit:parseFloat(document.getElementById('pStopProfit').value), industry:document.getElementById('pIndustry').value, application:document.getElementById('pApplication').value, buy_date:document.getElementById('pBuyDate').value};
-            await fetch('/api/portfolio/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-            modal.hide(); loadPortfolio();
+            const resp = await fetch('/api/portfolio/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            const result = await resp.json();
+            if(result.success){
+                modal.hide(); loadPortfolio();
+            }else{
+                alert(result.error || '新增失敗');
+            }
         };
         modal.show();
     }
@@ -406,8 +411,13 @@
         `;
         document.getElementById('modalSave').onclick = async () => {
             const data = {code:document.getElementById('wCode').value, name:document.getElementById('wName').value, target_price:parseFloat(document.getElementById('wTarget').value), reason:document.getElementById('wReason').value, industry:document.getElementById('wIndustry').value, add_date:document.getElementById('wAddDate').value || new Date().toISOString().split('T')[0]};
-            await fetch('/api/watchlist/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-            modal.hide(); loadWatchlist();
+            const resp = await fetch('/api/watchlist/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            const result = await resp.json();
+            if(result.success){
+                modal.hide(); loadWatchlist();
+            }else{
+                alert(result.error || '新增失敗');
+            }
         };
         modal.show();
     }
