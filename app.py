@@ -10,7 +10,10 @@ import os
 import json
 import base64
 import io
+import urllib.request
+import urllib.error
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 import threading
 
@@ -71,9 +74,6 @@ sl = StrategyLibrary(config)
 
 def get_yahoo_price(stock_code: str) -> Optional[Dict]:
     """使用 Yahoo Finance 取得即時股價"""
-    import urllib.request
-    import json
-    
     try:
         # 上市: 2331.TW, 櫃買: 5392.TWO
         if stock_code.startswith('00') or stock_code.endswith('B'):
