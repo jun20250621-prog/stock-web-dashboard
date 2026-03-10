@@ -216,8 +216,10 @@
     function viewStockChart(code){
         // 切換到技術圖 tab 並載入 K 線圖
         document.querySelector('[data-bs-target="#chart"]').click();
-        document.getElementById('stockSelect').value = code;
-        loadStockChart();
+        setTimeout(() => {
+            document.getElementById('stockSelect').value = code;
+            loadStockChart();
+        }, 300);
     }
 
     function editPortfolio(code){
