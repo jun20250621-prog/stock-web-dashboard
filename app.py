@@ -72,15 +72,17 @@ sl = StrategyLibrary(config)
 
 # ==================== Yahoo Finance 工具 ====================
 
-def get_yahoo_price(stock_code: str) -> Optional[Dict]:
+def get_yahoo_price(stock_code: str, days: int = 60) -> Optional[Dict]:
     """使用 Yahoo Finance 取得即時股價"""
+    from datetime import datetime
+    
     try:
         # 上市: 2331.TW, 櫃買: 5392.TWO
         if stock_code.startswith('00') or stock_code.endswith('B'):
             return None  # ETF 不支援
         
         symbol = f"{stock_code}.TW"
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range={days}d"
         
         headers = {'User-Agent': 'Mozilla/5.0'}
         req = urllib.request.Request(url, headers=headers)
@@ -91,7 +93,7 @@ def get_yahoo_price(stock_code: str) -> Optional[Dict]:
         except urllib.error.HTTPError:
             # 嘗試櫃買
             symbol = f"{stock_code}.TWO"
-            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range={days}d"
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=10) as response:
                 data = json.loads(response.read().decode('utf-8'))
@@ -115,8 +117,10 @@ def get_yahoo_price(stock_code: str) -> Optional[Dict]:
             opens = quote.get('open', [])
             highs = quote.get('high', [])
             lows = quote.get('low', [])
+            timestamps = result.get('timestamp', [])
             
             price_data = []
+            from datetime import datetime
             for i in range(len(closes)):
                 if closes[i] is not None:
                     price_data.append({
@@ -124,6 +128,7 @@ def get_yahoo_price(stock_code: str) -> Optional[Dict]:
                         'open': opens[i] if i < len(opens) and opens[i] else closes[i],
                         'high': highs[i] if i < len(highs) and highs[i] else closes[i],
                         'low': lows[i] if i < len(lows) and lows[i] else closes[i],
+                        'date': datetime.fromtimestamp(timestamps[i]).strftime('%Y-%m-%d') if i < len(timestamps) else ''
                     })
             
             return {
