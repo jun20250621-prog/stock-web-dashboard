@@ -1,30 +1,165 @@
 {
   "portfolio": {
-    "2630": {"name": "亞航", "cost": 55, "shares": 1000, "stop_loss": 50, "stop_profit": 70, "industry": "航太", "application": "飛機維修", "buy_date": "2025-01-15"},
-    "8112": {"name": "至上", "cost": 73.9, "shares": 1000, "stop_loss": 65, "stop_profit": 90, "industry": "半導體", "application": "IC通路", "buy_date": "2025-01-20"},
-    "2374": {"name": "佳能", "cost": 83.5, "shares": 1000, "stop_loss": 75, "stop_profit": 100, "industry": "光電", "application": "光學鏡頭", "buy_date": "2025-02-10"},
-    "2356": {"name": "英業達", "cost": 51.5, "shares": 1000, "stop_loss": 45, "stop_profit": 65, "industry": "電子", "application": "AI伺服器", "buy_date": "2025-03-15"},
-    "2353": {"name": "宏碁", "cost": 37, "shares": 1000, "stop_loss": 30, "stop_profit": 50, "industry": "電子", "application": "PC/AI", "buy_date": "2025-03-20"},
-    "3231": {"name": "緯創", "cost": 156, "shares": 1000, "stop_loss": 140, "stop_profit": 190, "industry": "電子", "application": "AI伺服器", "buy_date": "2025-04-01"},
-    "6282": {"name": "康舒", "cost": 50, "shares": 1000, "stop_loss": 45, "stop_profit": 65, "industry": "電源", "application": "電源供應器", "buy_date": "2025-04-10"},
-    "4909": {"name": "新復興", "cost": 61, "shares": 1000, "stop_loss": 55, "stop_profit": 75, "industry": "通訊", "application": "光纖/網通", "buy_date": "2025-04-15"},
-    "2331": {"name": "精英", "cost": 27.4, "shares": 1000, "stop_loss": 24, "stop_profit": 35, "industry": "電腦週邊", "application": "主機板/顯示卡"},
-    "2317": {"name": "鴻海", "cost": 224, "shares": 1000, "stop_loss": 200, "stop_profit": 270, "industry": "電子代工", "application": "AI伺服器/蘋果供應鏈"},
-    "00687B": {"name": "國泰20年美債", "cost": 29.35, "shares": 1000, "stop_loss": 28, "stop_profit": 32, "industry": "債券ETF", "application": "美國國債"}
+    "2630": {
+      "name": "亞航",
+      "cost": 55.0,
+      "shares": 1000,
+      "stop_loss": 50.0,
+      "stop_profit": 70.0,
+      "industry": "航太",
+      "application": "飛機維修",
+      "buy_date": "2025-01-15"
+    },
+    "8112": {
+      "name": "至上",
+      "cost": 73.9,
+      "shares": 1000,
+      "stop_loss": 65.0,
+      "stop_profit": 90.0,
+      "industry": "半導體",
+      "application": "IC通路",
+      "buy_date": "2025-01-20"
+    },
+    "2374": {
+      "name": "佳能",
+      "cost": 83.5,
+      "shares": 1000,
+      "stop_loss": 75.0,
+      "stop_profit": 100.0,
+      "industry": "光電",
+      "application": "光學鏡頭",
+      "buy_date": "2025-02-10"
+    },
+    "2356": {
+      "name": "英業達",
+      "cost": 51.5,
+      "shares": 1000,
+      "stop_loss": 45.0,
+      "stop_profit": 65.0,
+      "industry": "電子",
+      "application": "AI伺服器",
+      "buy_date": "2025-03-15"
+    },
+    "2353": {
+      "name": "宏碁",
+      "cost": 37.0,
+      "shares": 1000,
+      "stop_loss": 30.0,
+      "stop_profit": 50.0,
+      "industry": "電子",
+      "application": "PC/AI",
+      "buy_date": "2025-03-20"
+    },
+    "3231": {
+      "name": "緯創",
+      "cost": 156.0,
+      "shares": 1000,
+      "stop_loss": 140.0,
+      "stop_profit": 190.0,
+      "industry": "電子",
+      "application": "AI伺服器",
+      "buy_date": "2025-04-01"
+    },
+    "6282": {
+      "name": "康舒",
+      "cost": 50.0,
+      "shares": 1000,
+      "stop_loss": 45.0,
+      "stop_profit": 65.0,
+      "industry": "電源",
+      "application": "電源供應器",
+      "buy_date": "2025-04-10"
+    },
+    "4909": {
+      "name": "新復興",
+      "cost": 61.0,
+      "shares": 1000,
+      "stop_loss": 55.0,
+      "stop_profit": 75.0,
+      "industry": "通訊",
+      "application": "光纖/網通",
+      "buy_date": "2025-04-15"
+    },
+    "2331": {
+      "name": "精英",
+      "cost": 27.4,
+      "shares": 1000,
+      "stop_loss": 24.0,
+      "stop_profit": 35.0,
+      "industry": "電腦週邊",
+      "application": "主機板/顯示卡",
+      "buy_date": ""
+    },
+    "2317": {
+      "name": "鴻海",
+      "cost": 224.0,
+      "shares": 1000,
+      "stop_loss": 200.0,
+      "stop_profit": 270.0,
+      "industry": "電子代工",
+      "application": "AI伺服器/蘋果供應鏈",
+      "buy_date": ""
+    },
+    "00687B": {
+      "name": "國泰20年美債",
+      "cost": 29.35,
+      "shares": 1000,
+      "stop_loss": 28.0,
+      "stop_profit": 32.0,
+      "industry": "債券ETF",
+      "application": "美國國債",
+      "buy_date": ""
+    }
   },
   "watchlist": [
-    {"code": "2543", "name": "皇昌", "industry": "營建", "application": "營造工程"},
-    {"code": "3380", "name": "明泰", "industry": "電子", "application": "網通設備"},
-    {"code": "2049", "name": "上銀", "industry": "機械", "application": "線性滑軌"},
-    {"code": "6425", "name": "易發", "industry": "電子", "application": "半導體設備"},
-    {"code": "2485", "name": "兆赫", "industry": "電子", "application": "光纖通訊"},
-    {"code": "6443", "name": "元晶", "industry": "電子", "application": "太陽能模組"}
+    {
+      "code": "2543",
+      "name": "皇昌",
+      "industry": "營建",
+      "application": "營造工程"
+    },
+    {
+      "code": "3380",
+      "name": "明泰",
+      "industry": "電子",
+      "application": "網通設備"
+    },
+    {
+      "code": "2049",
+      "name": "上銀",
+      "industry": "機械",
+      "application": "線性滑軌"
+    },
+    {
+      "code": "6425",
+      "name": "易發",
+      "industry": "電子",
+      "application": "半導體設備"
+    },
+    {
+      "code": "2485",
+      "name": "兆赫",
+      "industry": "電子",
+      "application": "光纖通訊"
+    },
+    {
+      "code": "6443",
+      "name": "元晶",
+      "industry": "電子",
+      "application": "太陽能模組"
+    }
   ],
-  "telegram": {"bot_token": "8294937993:AAFOY_rwU33p6ndhFrnDyjKFrSQ-_1KavOE", "chat_id": "8137433836"},
+  "telegram": {
+    "bot_token": "8294937993:AAFOY_rwU33p6ndhFrnDyjKFrSQ-_1KavOE",
+    "chat_id": "8137433836"
+  },
   "schedule": {
     "morning": "08:30",
     "monitor": "09:30,10:30,11:30,13:00,14:00",
     "evening": "15:00"
   },
-  "alert": {"gain_threshold": 10, "loss_threshold": 5}
+  "alert": {
+    "gain_threshold": 10,
+    "loss_threshold": 5
+  }
 }
