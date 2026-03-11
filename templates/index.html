@@ -26,8 +26,6 @@
         .chart-scroller { overflow-x: auto; white-space: nowrap; padding: 10px 0; }
         .chart-scroller .chart-item { display: inline-block; width: 380px; margin-right: 15px; vertical-align: top; background: white; padding: 10px; border-radius: 8px; }
         .chart-scroller canvas { width: 100% !important; height: 150px !important; }
-        .all-chart-block { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        .all-chart-block canvas { width: 100% !important; height: 180px !important; }
     </style>
 </head>
 <body>
@@ -116,7 +114,6 @@
                         <select class="form-select form-select-sm ms-3" id="stockSelect" style="width:auto;display:inline-block;"><option value="">選擇股票...</option><option value="ALL">全部顯示 (ALL)</option></select>
                         <select class="form-select form-select-sm ms-2" id="chartType" style="width:auto;display:inline-block;" onchange="loadStockChart()">
                             <option value="price">股價走勢圖</option>
-                            <option value="ALL">全部技術指標 (ALL)</option>
                             <option value="kdj">KDJ 指標</option>
                             <option value="macd">MACD 指標</option>
                             <option value="rsi">RSI 指標</option>
@@ -347,7 +344,7 @@
             const watchlist = await resp2.json();
             
             const select = document.getElementById('stockSelect');
-            select.innerHTML = '<option value="">選擇股票...</option><option value="ALL">全部顯示 (ALL)</option>';
+            select.innerHTML = '<option value="">選擇股票...</option>';
             
             // 持股
             portfolio.forEach(s => select.innerHTML += `<option value="${s.code}">${s.code} ${s.name} (持股)</option>`);
@@ -366,11 +363,10 @@
 
     async function loadStockChart(){
         const code = document.getElementById('stockSelect').value; 
-        const chartType = document.getElementById('chartType').value;
         if(!code) return;
         
-        // 處理 ALL 選項（股票下拉選ALL 或 指標選全部技術指標）
-        if(code === 'ALL' || chartType === 'ALL'){
+        // 處理 ALL 選項
+        if(code === 'ALL'){
             await loadAllCharts();
             return;
         }
@@ -393,14 +389,7 @@
             if(mainChart) mainChart.destroy();
             let chartData={}, chartOptions={responsive:true, maintainAspectRatio:false};
             if(chartType==='price'){
-                // 股價走勢圖 + 全部 MA 均線
-                chartData = {labels:data.labels, datasets:[
-                    {label:'股價', data:data.prices, borderColor:'#1a73e8', yAxisID:'y'},
-                    {label:'MA5', data:data.ma5, borderColor:'#34a853', borderDash:[5,5], pointRadius:0, yAxisID:'y'},
-                    {label:'MA20', data:data.ma20, borderColor:'#fbbc04', borderDash:[5,5], pointRadius:0, yAxisID:'y'},
-                    {label:'MA60', data:data.ma60, borderColor:'#ea4335', borderDash:[5,5], pointRadius:0, yAxisID:'y'}
-                ]};
-                chartOptions.scales = {y:{position:'right'}};
+                chartData = {labels:data.labels, datasets:[{label:'股價', data:data.prices, borderColor:'#1a73e8'},{label:'MA5', data:data.ma5, borderColor:'#34a853', borderDash:[5,5]},{label:'MA20', data:data.ma20, borderColor:'#fbbc04', borderDash:[5,5]}]};
             }else if(chartType==='rsi'){
                 chartData = {labels:data.labels, datasets:[{label:'RSI', data:data.rsi, borderColor:'#9c27b0'}]};
                 chartOptions.scales = {y:{min:0,max:100}};
@@ -438,33 +427,29 @@
                     const data = await resp.json();
                     if(!data || !data.prices || data.prices.length === 0) continue;
                     
-                    // 建立股票區塊（包含所有指標，垂直排列）
+                    // 建立股票區塊（包含所有指標）
                     const div = document.createElement('div');
-                    div.className = 'all-chart-block';
+                    div.className = 'chart-item';
                     div.innerHTML = `
-                        <h5 class="text-center mb-3">${code} - 技術分析完整版</h5>
-                        <div class="mb-3"><canvas id="chart_${code}_price"></canvas></div>
-                        <div class="mb-3"><canvas id="chart_${code}_ma"></canvas></div>
-                        <div class="row mb-3">
+                        <h6 class="text-center mb-2">${code}</h6>
+                        <div class="row g-1">
+                            <div class="col-6"><canvas id="chart_${code}_price"></canvas></div>
+                            <div class="col-6"><canvas id="chart_${code}_ma"></canvas></div>
                             <div class="col-6"><canvas id="chart_${code}_kdj"></canvas></div>
                             <div class="col-6"><canvas id="chart_${code}_macd"></canvas></div>
+                            <div class="col-6"><canvas id="chart_${code}_rsi"></canvas></div>
                         </div>
-                        <div><canvas id="chart_${code}_rsi"></canvas></div>
                     `;
                     container.appendChild(div);
                     
-                    // 股價走勢 + MA5/20
+                    // 股價走勢圖
                     new Chart(document.getElementById('chart_'+code+'_price').getContext('2d'), {
                         type: 'line',
-                        data: {labels:data.labels, datasets:[
-                            {label:'股價', data:data.prices, borderColor:'#1a73e8', tension:0.1},
-                            {label:'MA5', data:data.ma5, borderColor:'#34a853', borderDash:[5,5], pointRadius:0},
-                            {label:'MA20', data:data.ma20, borderColor:'#fbbc04', borderDash:[5,5], pointRadius:0}
-                        ]},
-                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}, title:{display:true, text:'股價走勢 (含MA5/20)'}}}
+                        data: {labels:data.labels, datasets:[{label:'股價', data:data.prices, borderColor:'#1a73e8', tension:0.1}]},
+                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{display:false}}}
                     });
                     
-                    // MA 均線 5/20/60
+                    // MA 均線
                     new Chart(document.getElementById('chart_'+code+'_ma').getContext('2d'), {
                         type: 'line',
                         data: {labels:data.labels, datasets:[
@@ -472,7 +457,7 @@
                             {label:'MA20', data:data.ma20, borderColor:'#fbbc04', tension:0.1, pointRadius:0},
                             {label:'MA60', data:data.ma60, borderColor:'#ea4335', tension:0.1, pointRadius:0}
                         ]},
-                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}, title:{display:true, text:'MA 均線 (5/20/60)'}}}
+                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
                     });
                     
                     // KDJ
@@ -482,7 +467,7 @@
                             {label:'K', data:data.k, borderColor:'#1a73e8', tension:0.1, pointRadius:0},
                             {label:'D', data:data.d, borderColor:'#ea4335', tension:0.1, pointRadius:0}
                         ]},
-                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}, title:{display:true, text:'KDJ 指標'}}}
+                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
                     });
                     
                     // MACD
@@ -492,26 +477,11 @@
                             {label:'MACD', data:data.macd, borderColor:'#1a73e8', tension:0.1, pointRadius:0},
                             {label:'Signal', data:data.signal, borderColor:'#fbbc04', tension:0.1, pointRadius:0}
                         ]},
-                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}, title:{display:true, text:'MACD 指標'}}}
+                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
                     });
                     
                     // RSI
                     new Chart(document.getElementById('chart_'+code+'_rsi').getContext('2d'), {
-                        type: 'line',
-                        data: {labels:data.labels, datasets:[
-                            {label:'RSI', data:data.rsi, borderColor:'#9c27b0', tension:0.1, pointRadius:0}
-                        ]},
-                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}, title:{display:true, text:'RSI 指標'}}, scales:{y:{min:0,max:100}}}
-                    });
-                }catch(e){
-                    console.error('Error loading chart for', code, e);
-                }
-            }
-        }catch(e){ 
-            console.error(e); 
-            container.innerHTML = '<div class="text-danger p-3">載入失敗</div>'; 
-        }
-    }
                         type: 'line',
                         data: {labels:data.labels, datasets:[
                             {label:'RSI', data:data.rsi, borderColor:'#9c27b0', tension:0.1, pointRadius:0}
