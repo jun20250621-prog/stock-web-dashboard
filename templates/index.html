@@ -389,7 +389,14 @@
             if(mainChart) mainChart.destroy();
             let chartData={}, chartOptions={responsive:true, maintainAspectRatio:false};
             if(chartType==='price'){
-                chartData = {labels:data.labels, datasets:[{label:'股價', data:data.prices, borderColor:'#1a73e8'},{label:'MA5', data:data.ma5, borderColor:'#34a853', borderDash:[5,5]},{label:'MA20', data:data.ma20, borderColor:'#fbbc04', borderDash:[5,5]}]};
+                // 股價走勢圖 + 全部 MA 均線
+                chartData = {labels:data.labels, datasets:[
+                    {label:'股價', data:data.prices, borderColor:'#1a73e8', yAxisID:'y'},
+                    {label:'MA5', data:data.ma5, borderColor:'#34a853', borderDash:[5,5], pointRadius:0, yAxisID:'y'},
+                    {label:'MA20', data:data.ma20, borderColor:'#fbbc04', borderDash:[5,5], pointRadius:0, yAxisID:'y'},
+                    {label:'MA60', data:data.ma60, borderColor:'#ea4335', borderDash:[5,5], pointRadius:0, yAxisID:'y'}
+                ]};
+                chartOptions.scales = {y:{position:'right'}};
             }else if(chartType==='rsi'){
                 chartData = {labels:data.labels, datasets:[{label:'RSI', data:data.rsi, borderColor:'#9c27b0'}]};
                 chartOptions.scales = {y:{min:0,max:100}};
