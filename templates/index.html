@@ -217,7 +217,7 @@
             portfolioData = await resp.json();
             let html = ''; let totalValue = 0, totalCost = 0;
             portfolioData.forEach(s => {
-                totalValue += (s.current_price||0)*1000; totalCost += (s.cost||0)*1000;
+                totalValue += (s.current_price||0)*(s.shares||0); totalCost += (s.cost||0)*(s.shares||0);
                 const pc = (s.profit_loss||0)>=0?'profit-positive':'profit-negative';
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
                 html += `<tr><td style="cursor:pointer;color:#0d6efd;" onclick="viewStockChart('${s.code}')"><b>${s.code}</b> ${s.name||''}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
