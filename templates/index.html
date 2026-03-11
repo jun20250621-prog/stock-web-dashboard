@@ -113,11 +113,7 @@
                         <i class="fas fa-chart-line me-2"></i>個股技術分析
                         <select class="form-select form-select-sm ms-3" id="stockSelect" style="width:auto;display:inline-block;"><option value="">選擇股票...</option><option value="ALL">全部顯示 (ALL)</option></select>
                         <select class="form-select form-select-sm ms-2" id="chartType" style="width:auto;display:inline-block;" onchange="loadStockChart()">
-                            <option value="price">股價走勢圖</option>
-                            <option value="kdj">KDJ 指標</option>
-                            <option value="macd">MACD 指標</option>
-                            <option value="rsi">RSI 指標</option>
-                            <option value="ma">MA 均線</option>
+                            <option value="price">股價+MA+KDJ+MACD+RSI</option>
                         </select>
                     </div>
                     <div class="card-body">
@@ -385,12 +381,105 @@
                 return; 
             }
             const chartType = document.getElementById('chartType').value;
-            const ctx = document.getElementById('mainChart').getContext('2d');
-            if(mainChart) mainChart.destroy();
-            let chartData={}, chartOptions={responsive:true, maintainAspectRatio:false};
-            if(chartType==='price'){
-                chartData = {labels:data.labels, datasets:[{label:'股價', data:data.prices, borderColor:'#1a73e8'},{label:'MA5', data:data.ma5, borderColor:'#34a853', borderDash:[5,5]},{label:'MA20', data:data.ma20, borderColor:'#fbbc04', borderDash:[5,5]}]};
-            }else if(chartType==='rsi'){
+            
+            // 價格走勢圖：顯示全部指標
+            if(chartType === 'price'){
+                // 隱藏原本的單一圖表，顯示多圖表區塊
+                document.getElementById('singleChartContainer').style.display = 'none';
+                document.getElementById('allChartsContainer').style.display = 'block';
+                
+                const container = document.getElementById('allChartsContent');
+                container.innerHTML = '';
+                
+                const div = document.createElement('div');
+                div.className = 'chart-item';
+                div.style.width = '100%';
+                div.innerHTML = `
+                    <h5 class="text-center mb-2">${code} - 技術分析</h5>
+                    <div class="row g-2">
+                        <div class="col-12"><canvas id="chart_${code}_price"></canvas></div>
+                        <div class="col-12"><canvas id="chart_${code}_ma"></canvas></div>
+                        <div class="col-6"><canvas id="chart_${code}_kdj"></canvas></div>
+                        <div class="col-6"><canvas id="chart_${code}_macd"></canvas></div>
+                        <div class="col-6"><canvas id="chart_${code}_rsi"></canvas></div>
+                    </div>
+                `;
+                container.appendChild(div);
+                
+                // 股價 + MA
+                new Chart(document.getElementById('chart_'+code+'_price').getContext('2d'), {
+                    type: 'line',
+                    data: {labels:data.labels, datasets:[
+                        {label:'股價', data:data.prices, borderColor:'#1a73e8', tension:0.1},
+                        {label:'MA5', data:data.ma5, borderColor:'#34a853', borderDash:[5,5], pointRadius:0},
+                        {label:'MA20', data:data.ma20, borderColor:'#fbbc04', borderDash:[5,5], pointRadius:0}
+                    ]},
+                    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}, title:{display:true, text:'股價走勢'}}}
+                });
+                
+                // MA 均線
+                new Chart(document.getElementById('chart_'+code+'_ma').getContext('2d'), {
+                    type: 'line',
+                    data: {labels:data.labels, datasets:[
+                        {label:'MA5', data:data.ma5, borderColor:'#34a853', tension:0.1, pointRadius:0},
+                        {label:'MA20', data:data.ma20, borderColor:'#fbbc04', tension:0.1, pointRadius:0},
+                        {label:'MA60', data:data.ma60, borderColor:'#ea4335', tension:0.1, pointRadius:0}
+                    ]},
+                    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}, title:{display:true, text:'MA 均線'}}}
+                });
+                
+                // KDJ
+                new Chart(document.getElementById('chart_'+code+'_kdj').getContext('2d'), {
+                    type: 'line',
+                    data: {labels:data.labels, datasets:[
+                        {label:'K', data:data.k, borderColor:'#1a73e8', tension:0.1, pointRadius:0},
+                        {label:'D', data:data.d, borderColor:'#ea4335', tension:0.1, pointRadius:0}
+                    ]},
+                    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}, title:{display:true, text:'KDJ 指標'}}}
+                });
+                
+                // MACD
+                new Chart(document.getElementById('chart_'+code+'_macd').getContext('2d'), {
+                    type: 'line',
+                    data: {labels:data.labels, datasets:[
+                        {label:'MACD', data:data.macd, borderColor:'#1a73e8', tension:0.1, pointRadius:0},
+                        {label:'Signal', data:data.signal, borderColor:'#fbbc04', tension:0.1, pointRadius:0}
+                    ]},
+                    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}, title:{display:true, text:'MACD 指標'}}}
+                });
+                
+                // RSI
+                new Chart(document.getElementById('chart_'+code+'_rsi').getContext('2d'), {
+                    type: 'line',
+                    data: {labels:data.labels, datasets:[
+                        {label:'RSI', data:data.rsi, borderColor:'#9c27b0', tension:0.1, pointRadius:0}
+                    ]},
+                    options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true}, title:{display:true, text:'RSI 指標'}}, scales:{y:{min:0,max:100}}}
+                });
+                
+                return;
+            }
+            
+            // 單一指標圖表（KDJ/MACD/RSI/MA 各自顯示）
+            document.getElementById('singleChartContainer').style.display = 'block';
+            document.getElementById('allChartsContainer').style.display = 'none';
+            
+            try{
+                console.log('Loading chart for:', code);
+                const resp = await fetch('/api/stock/'+code);
+                const data = await resp.json(); 
+                console.log('API response:', data);
+                if(!data || !data.prices || data.prices.length === 0){ 
+                    alert('無法取得資料: ' + (data?.error || 'unknown')); 
+                    return; 
+                }
+                const chartType = document.getElementById('chartType').value;
+                const ctx = document.getElementById('mainChart').getContext('2d');
+                if(mainChart) mainChart.destroy();
+                let chartData={}, chartOptions={responsive:true, maintainAspectRatio:false};
+                if(chartType==='price'){
+                    chartData = {labels:data.labels, datasets:[{label:'股價', data:data.prices, borderColor:'#1a73e8'},{label:'MA5', data:data.ma5, borderColor:'#34a853', borderDash:[5,5]},{label:'MA20', data:data.ma20, borderColor:'#fbbc04', borderDash:[5,5]}]};
+                }else if(chartType==='rsi'){
                 chartData = {labels:data.labels, datasets:[{label:'RSI', data:data.rsi, borderColor:'#9c27b0'}]};
                 chartOptions.scales = {y:{min:0,max:100}};
             }else if(chartType==='kdj'){
