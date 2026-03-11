@@ -24,15 +24,15 @@
         .stock-code { font-weight: bold; color: var(--primary); }
         .chart-container { position: relative; height: 350px; margin: 15px 0; }
         .chart-scroller { overflow-x: auto; white-space: nowrap; padding: 10px 0; }
-        .chart-scroller .chart-item { display: inline-block; width: 350px; margin-right: 15px; vertical-align: top; }
-        .chart-scroller canvas { width: 100% !important; height: 300px !important; }
+        .chart-scroller .chart-item { display: inline-block; width: 380px; margin-right: 15px; vertical-align: top; background: white; padding: 10px; border-radius: 8px; }
+        .chart-scroller canvas { width: 100% !important; height: 150px !important; }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-dark navbar-expand-lg">
         <div class="container-fluid">
             <a class="navbar-brand" href="javascript:location.reload()">
-                <i class="fas fa-chart-line me-2"></i>台股智能分析系統
+                <i class="fas fa-chart-line me-2"></i>台股智能分析系統 <span class="badge bg-warning text-dark ms-2">v2.0</span>
             </a>
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item"><a class="nav-link" href="javascript:loadAll()"><i class="fas fa-sync-alt me-1"></i>重新整理</a></li>
@@ -405,7 +405,6 @@
     }
     
     async function loadAllCharts(){
-        const chartType = document.getElementById('chartType').value;
         document.getElementById('singleChartContainer').style.display = 'none';
         document.getElementById('allChartsContainer').style.display = 'block';
         
@@ -413,44 +412,82 @@
         container.innerHTML = '<div class="text-center p-3">載入中...</div>';
         
         try{
-            // 取得持股和觀察名單
             const resp1 = await fetch('/api/portfolio');
             const portfolio = await resp1.json();
             const resp2 = await fetch('/api/watchlist');
             const watchlist = await resp2.json();
             
-            // 合併並去除重複
             const allCodes = [...new Set([...portfolio.map(s=>s.code), ...watchlist.map(s=>s.code)])];
             
             container.innerHTML = '';
             
-            // 為每個股票建立圖表
-            for(const code of allCodes.slice(0, 15)){  // 最多15個
+            for(const code of allCodes.slice(0, 10)){  // 最多10個
                 try{
                     const resp = await fetch('/api/stock/'+code);
                     const data = await resp.json();
                     if(!data || !data.prices || data.prices.length === 0) continue;
                     
+                    // 建立股票區塊（包含所有指標）
                     const div = document.createElement('div');
                     div.className = 'chart-item';
-                    div.innerHTML = `<h6 class="text-center">${code}</h6><canvas id="chart_${code}"></canvas>`;
+                    div.innerHTML = `
+                        <h6 class="text-center mb-2">${code}</h6>
+                        <div class="row g-1">
+                            <div class="col-6"><canvas id="chart_${code}_price"></canvas></div>
+                            <div class="col-6"><canvas id="chart_${code}_ma"></canvas></div>
+                            <div class="col-6"><canvas id="chart_${code}_kdj"></canvas></div>
+                            <div class="col-6"><canvas id="chart_${code}_macd"></canvas></div>
+                            <div class="col-6"><canvas id="chart_${code}_rsi"></canvas></div>
+                        </div>
+                    `;
                     container.appendChild(div);
                     
-                    const ctx = document.getElementById('chart_'+code).getContext('2d');
-                    let chartData={}, chartOptions={responsive:true, maintainAspectRatio:false};
-                    if(chartType==='price'){
-                        chartData = {labels:data.labels, datasets:[{label:'股價', data:data.prices, borderColor:'#1a73e8'}]};
-                    }else if(chartType==='rsi'){
-                        chartData = {labels:data.labels, datasets:[{label:'RSI', data:data.rsi, borderColor:'#9c27b0'}]};
-                        chartOptions.scales = {y:{min:0,max:100}};
-                    }else if(chartType==='kdj'){
-                        chartData = {labels:data.labels, datasets:[{label:'K', data:data.k, borderColor:'#1a73e8'},{label:'D', data:data.d, borderColor:'#ea4335'}]};
-                    }else if(chartType==='macd'){
-                        chartData = {labels:data.labels, datasets:[{label:'MACD', data:data.macd, borderColor:'#1a73e8'},{label:'Signal', data:data.signal, borderColor:'#fbbc04'}]};
-                    }else if(chartType==='ma'){
-                        chartData = {labels:data.labels, datasets:[{label:'MA5', data:data.ma5, borderColor:'#34a853'},{label:'MA20', data:data.ma20, borderColor:'#fbbc04'},{label:'MA60', data:data.ma60, borderColor:'#ea4335'}]};
-                    }
-                    new Chart(ctx, {type:'line', data:chartData, options:chartOptions});
+                    // 股價走勢圖
+                    new Chart(document.getElementById('chart_'+code+'_price').getContext('2d'), {
+                        type: 'line',
+                        data: {labels:data.labels, datasets:[{label:'股價', data:data.prices, borderColor:'#1a73e8', tension:0.1}]},
+                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{display:false}}}
+                    });
+                    
+                    // MA 均線
+                    new Chart(document.getElementById('chart_'+code+'_ma').getContext('2d'), {
+                        type: 'line',
+                        data: {labels:data.labels, datasets:[
+                            {label:'MA5', data:data.ma5, borderColor:'#34a853', tension:0.1, pointRadius:0},
+                            {label:'MA20', data:data.ma20, borderColor:'#fbbc04', tension:0.1, pointRadius:0},
+                            {label:'MA60', data:data.ma60, borderColor:'#ea4335', tension:0.1, pointRadius:0}
+                        ]},
+                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+                    });
+                    
+                    // KDJ
+                    new Chart(document.getElementById('chart_'+code+'_kdj').getContext('2d'), {
+                        type: 'line',
+                        data: {labels:data.labels, datasets:[
+                            {label:'K', data:data.k, borderColor:'#1a73e8', tension:0.1, pointRadius:0},
+                            {label:'D', data:data.d, borderColor:'#ea4335', tension:0.1, pointRadius:0}
+                        ]},
+                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+                    });
+                    
+                    // MACD
+                    new Chart(document.getElementById('chart_'+code+'_macd').getContext('2d'), {
+                        type: 'line',
+                        data: {labels:data.labels, datasets:[
+                            {label:'MACD', data:data.macd, borderColor:'#1a73e8', tension:0.1, pointRadius:0},
+                            {label:'Signal', data:data.signal, borderColor:'#fbbc04', tension:0.1, pointRadius:0}
+                        ]},
+                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+                    });
+                    
+                    // RSI
+                    new Chart(document.getElementById('chart_'+code+'_rsi').getContext('2d'), {
+                        type: 'line',
+                        data: {labels:data.labels, datasets:[
+                            {label:'RSI', data:data.rsi, borderColor:'#9c27b0', tension:0.1, pointRadius:0}
+                        ]},
+                        options: {responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{min:0,max:100}}}
+                    });
                 }catch(e){
                     console.error('Error loading chart for', code, e);
                 }
