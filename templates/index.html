@@ -116,6 +116,7 @@
                         <select class="form-select form-select-sm ms-3" id="stockSelect" style="width:auto;display:inline-block;"><option value="">選擇股票...</option><option value="ALL">全部顯示 (ALL)</option></select>
                         <select class="form-select form-select-sm ms-2" id="chartType" style="width:auto;display:inline-block;" onchange="loadStockChart()">
                             <option value="price">股價走勢圖</option>
+                            <option value="ALL">全部技術指標 (ALL)</option>
                             <option value="kdj">KDJ 指標</option>
                             <option value="macd">MACD 指標</option>
                             <option value="rsi">RSI 指標</option>
@@ -346,7 +347,7 @@
             const watchlist = await resp2.json();
             
             const select = document.getElementById('stockSelect');
-            select.innerHTML = '<option value="">選擇股票...</option>';
+            select.innerHTML = '<option value="">選擇股票...</option><option value="ALL">全部顯示 (ALL)</option>';
             
             // 持股
             portfolio.forEach(s => select.innerHTML += `<option value="${s.code}">${s.code} ${s.name} (持股)</option>`);
@@ -365,10 +366,11 @@
 
     async function loadStockChart(){
         const code = document.getElementById('stockSelect').value; 
+        const chartType = document.getElementById('chartType').value;
         if(!code) return;
         
-        // 處理 ALL 選項
-        if(code === 'ALL'){
+        // 處理 ALL 選項（股票下拉選ALL 或 指標選全部技術指標）
+        if(code === 'ALL' || chartType === 'ALL'){
             await loadAllCharts();
             return;
         }
