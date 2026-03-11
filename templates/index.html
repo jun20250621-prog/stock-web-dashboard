@@ -326,11 +326,25 @@
 
     async function loadStockSelect(){
         try{
-            const resp = await fetch('/api/portfolio');
-            const stocks = await resp.json();
+            const resp1 = await fetch('/api/portfolio');
+            const portfolio = await resp1.json();
+            const resp2 = await fetch('/api/watchlist');
+            const watchlist = await resp2.json();
+            
             const select = document.getElementById('stockSelect');
             select.innerHTML = '<option value="">選擇股票...</option>';
-            stocks.forEach(s => select.innerHTML += `<option value="${s.code}">${s.code} ${s.name}</option>`);
+            
+            // 持股
+            portfolio.forEach(s => select.innerHTML += `<option value="${s.code}">${s.code} ${s.name} (持股)</option>`);
+            
+            // 觀察名單（不重複）
+            const portfolioCodes = new Set(portfolio.map(s => s.code));
+            watchlist.forEach(s => {
+                if(!portfolioCodes.has(s.code)){
+                    select.innerHTML += `<option value="${s.code}">${s.code} ${s.name} (觀察)</option>`;
+                }
+            });
+            
             select.addEventListener('change', loadStockChart);
         }catch(e){ console.error(e); }
     }
