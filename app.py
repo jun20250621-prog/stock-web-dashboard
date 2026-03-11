@@ -72,7 +72,7 @@ sl = StrategyLibrary(config)
 
 # ==================== Yahoo Finance 工具 ====================
 
-def get_yahoo_price(stock_code: str, days: int = 60) -> Optional[Dict]:
+def get_yahoo_price(stock_code: str, days: int = 10) -> Optional[Dict]:
     """使用 Yahoo Finance 取得即時股價"""
     from datetime import datetime
     
@@ -107,7 +107,10 @@ def get_yahoo_price(stock_code: str, days: int = 60) -> Optional[Dict]:
                 return None
             
             current_price = meta.get('regularMarketPrice', 0)
-            prev_close = meta.get('previousClose', meta.get('chartPreviousClose', 0))
+            
+            # 從 K 線資料計算漲跌幅
+            closes = quote.get('close', [])
+            prev_close = closes[-2] if len(closes) >= 2 else current_price
             
             change = current_price - prev_close
             change_pct = (change / prev_close * 100) if prev_close else 0
@@ -238,7 +241,7 @@ def api_strategies():
 
 @app.route('/api/stock/<code>')
 def api_stock(code):
-    yahoo_data = get_yahoo_price(code)
+    yahoo_data = get_yahoo_price(code, 60)  # K 線需要 60 天資料
     price_data = []
     if yahoo_data and yahoo_data.get('price_data'):
         price_data = yahoo_data['price_data']
