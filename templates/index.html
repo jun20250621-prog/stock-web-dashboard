@@ -330,8 +330,14 @@
     async function loadStockChart(){
         const code = document.getElementById('stockSelect').value; if(!code) return;
         try{
+            console.log('Loading chart for:', code);
             const resp = await fetch('/api/stock/'+code);
-            const data = await resp.json(); if(!data||!data.prices){ alert('無法取得資料'); return; }
+            const data = await resp.json(); 
+            console.log('API response:', data);
+            if(!data || !data.prices || data.prices.length === 0){ 
+                alert('無法取得資料: ' + (data?.error || 'unknown')); 
+                return; 
+            }
             const chartType = document.getElementById('chartType').value;
             const ctx = document.getElementById('mainChart').getContext('2d');
             if(mainChart) mainChart.destroy();
