@@ -23,6 +23,9 @@
         .summary-card .label { color: #666; font-size: 0.85em; }
         .stock-code { font-weight: bold; color: var(--primary); }
         .chart-container { position: relative; height: 350px; margin: 15px 0; }
+        .chart-scroller { overflow-x: auto; white-space: nowrap; padding: 10px 0; }
+        .chart-scroller .chart-item { display: inline-block; width: 350px; margin-right: 15px; vertical-align: top; }
+        .chart-scroller canvas { width: 100% !important; height: 300px !important; }
     </style>
 </head>
 <body>
@@ -108,7 +111,7 @@
                 <div class="card">
                     <div class="card-header">
                         <i class="fas fa-chart-line me-2"></i>個股技術分析
-                        <select class="form-select form-select-sm ms-3" id="stockSelect" style="width:auto;display:inline-block;"><option value="">選擇股票...</option></select>
+                        <select class="form-select form-select-sm ms-3" id="stockSelect" style="width:auto;display:inline-block;"><option value="">選擇股票...</option><option value="ALL">全部顯示 (ALL)</option></select>
                         <select class="form-select form-select-sm ms-2" id="chartType" style="width:auto;display:inline-block;" onchange="loadStockChart()">
                             <option value="price">股價走勢圖</option>
                             <option value="kdj">KDJ 指標</option>
@@ -117,7 +120,16 @@
                             <option value="ma">MA 均線</option>
                         </select>
                     </div>
-                    <div class="card-body"><div class="chart-container"><canvas id="mainChart"></canvas></div></div>
+                    <div class="card-body">
+                        <!-- 單一股票圖表 -->
+                        <div id="singleChartContainer"><div class="chart-container"><canvas id="mainChart"></canvas></div></div>
+                        <!-- 全部股票圖表 (scroller) -->
+                        <div id="allChartsContainer" style="display:none;">
+                            <div class="chart-scroller">
+                                <div id="allChartsContent" class="d-flex flex-nowrap"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -350,7 +362,19 @@
     }
 
     async function loadStockChart(){
-        const code = document.getElementById('stockSelect').value; if(!code) return;
+        const code = document.getElementById('stockSelect').value; 
+        if(!code) return;
+        
+        // 處理 ALL 選項
+        if(code === 'ALL'){
+            await loadAllCharts();
+            return;
+        }
+        
+        // 單一股票圖表
+        document.getElementById('singleChartContainer').style.display = 'block';
+        document.getElementById('allChartsContainer').style.display = 'none';
+        
         try{
             console.log('Loading chart for:', code);
             const resp = await fetch('/api/stock/'+code);
@@ -378,6 +402,63 @@
             }
             mainChart = new Chart(ctx, {type:'line', data:chartData, options:chartOptions});
         }catch(e){ console.error(e); alert('載入失敗'); }
+    }
+    
+    async function loadAllCharts(){
+        const chartType = document.getElementById('chartType').value;
+        document.getElementById('singleChartContainer').style.display = 'none';
+        document.getElementById('allChartsContainer').style.display = 'block';
+        
+        const container = document.getElementById('allChartsContent');
+        container.innerHTML = '<div class="text-center p-3">載入中...</div>';
+        
+        try{
+            // 取得持股和觀察名單
+            const resp1 = await fetch('/api/portfolio');
+            const portfolio = await resp1.json();
+            const resp2 = await fetch('/api/watchlist');
+            const watchlist = await resp2.json();
+            
+            // 合併並去除重複
+            const allCodes = [...new Set([...portfolio.map(s=>s.code), ...watchlist.map(s=>s.code)])];
+            
+            container.innerHTML = '';
+            
+            // 為每個股票建立圖表
+            for(const code of allCodes.slice(0, 15)){  // 最多15個
+                try{
+                    const resp = await fetch('/api/stock/'+code);
+                    const data = await resp.json();
+                    if(!data || !data.prices || data.prices.length === 0) continue;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'chart-item';
+                    div.innerHTML = `<h6 class="text-center">${code}</h6><canvas id="chart_${code}"></canvas>`;
+                    container.appendChild(div);
+                    
+                    const ctx = document.getElementById('chart_'+code).getContext('2d');
+                    let chartData={}, chartOptions={responsive:true, maintainAspectRatio:false};
+                    if(chartType==='price'){
+                        chartData = {labels:data.labels, datasets:[{label:'股價', data:data.prices, borderColor:'#1a73e8'}]};
+                    }else if(chartType==='rsi'){
+                        chartData = {labels:data.labels, datasets:[{label:'RSI', data:data.rsi, borderColor:'#9c27b0'}]};
+                        chartOptions.scales = {y:{min:0,max:100}};
+                    }else if(chartType==='kdj'){
+                        chartData = {labels:data.labels, datasets:[{label:'K', data:data.k, borderColor:'#1a73e8'},{label:'D', data:data.d, borderColor:'#ea4335'}]};
+                    }else if(chartType==='macd'){
+                        chartData = {labels:data.labels, datasets:[{label:'MACD', data:data.macd, borderColor:'#1a73e8'},{label:'Signal', data:data.signal, borderColor:'#fbbc04'}]};
+                    }else if(chartType==='ma'){
+                        chartData = {labels:data.labels, datasets:[{label:'MA5', data:data.ma5, borderColor:'#34a853'},{label:'MA20', data:data.ma20, borderColor:'#fbbc04'},{label:'MA60', data:data.ma60, borderColor:'#ea4335'}]};
+                    }
+                    new Chart(ctx, {type:'line', data:chartData, options:chartOptions});
+                }catch(e){
+                    console.error('Error loading chart for', code, e);
+                }
+            }
+        }catch(e){ 
+            console.error(e); 
+            container.innerHTML = '<div class="text-danger p-3">載入失敗</div>'; 
+        }
     }
 
     function showAddPortfolio(){
