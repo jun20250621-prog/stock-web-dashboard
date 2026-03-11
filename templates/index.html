@@ -171,7 +171,15 @@
             const resp = await fetch('/api/schedule');
             const schedule = await resp.json();
             document.getElementById('scheduleMorning').value = schedule.morning || '08:30';
-            document.getElementById('scheduleMonitor').value = (schedule.monitor || []).join(',');
+            // 支援字串或陣列
+            const monitor = schedule.monitor;
+            if (Array.isArray(monitor)) {
+                document.getElementById('scheduleMonitor').value = monitor.join(',');
+            } else if (typeof monitor === 'string') {
+                document.getElementById('scheduleMonitor').value = monitor;
+            } else {
+                document.getElementById('scheduleMonitor').value = '09:30,10:30,11:30,13:00,14:00';
+            }
             document.getElementById('scheduleEvening').value = schedule.evening || '15:00';
         }catch(e){ console.error(e); }
     }
