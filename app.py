@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 台股智能分析系統 - 網頁版 (含排程設定)
+Version: 1.0.0
 """
 
 from flask import Flask, render_template, jsonify, request
@@ -16,6 +17,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict
 from apscheduler.schedulers.background import BackgroundScheduler
 import threading
+
+from data.stock_master import StockMaster, fetch_stock_info, calculate_target_price
 
 # 台灣時區 (UTC+8)
 def now_taiwan():
@@ -69,6 +72,7 @@ pm = PortfolioManager(config)
 wm = WatchlistManager(config)
 tj = TradeJournal(config)
 sl = StrategyLibrary(config)
+sm = StockMaster(config.get('database', {}).get('path', 'data/stock_data.db'))
 
 # ==================== Yahoo Finance 工具 ====================
 
@@ -359,12 +363,61 @@ def api_watchlist_add():
         if any(item.get('code') == code for item in existing):
             return jsonify({'success': False, 'error': f'股票 {code} 已經在觀察名單中'}), 400
         
+        # 自動抓取股票資料
+        stock_info = sm.fetch_and_save(code)
+        
+        if stock_info:
+            # 填入股名、產業、現價
+            data['name'] = stock_info.get('name', data.get('name', ''))
+            data['industry'] = stock_info.get('industry', data.get('industry', ''))
+            
+            # 計算目標價
+            target_prices = calculate_target_price(stock_info)
+            data['target_price'] = target_prices.get('graham') or target_prices.get('eps_15') or data.get('target_price')
+            data['target_prices'] = target_prices  # 全部目標價回傳給前端
+            data['stock_info'] = {
+                'price': stock_info.get('price'),
+                'change_pct': stock_info.get('change_pct'),
+                'pe': stock_info.get('pe'),
+                'high_52w': stock_info.get('high_52w'),
+                'low_52w': stock_info.get('low_52w')
+            }
+        else:
+            # 抓不到資料時，使用手動輸入
+            pass
+        
         wm.add(data)
         reload_config()
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'data': data})
     except Exception as e:
         import traceback
         return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
+
+@app.route('/api/stock/lookup/<code>', methods=['GET'])
+def api_stock_lookup(code):
+    """查詢股票資料並計算目標價"""
+    try:
+        # 先嘗試從資料庫取得
+        stock_info = sm.get(code)
+        
+        if not stock_info:
+            # 抓不到則從網路抓
+            stock_info = sm.fetch_and_save(code)
+        
+        if not stock_info:
+            return jsonify({'success': False, 'error': '無法取得股票資料'}), 404
+        
+        # 計算目標價
+        target_prices = calculate_target_price(stock_info)
+        
+        return jsonify({
+            'success': True,
+            'stock': stock_info,
+            'target_prices': target_prices
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/watchlist/delete/<code>', methods=['POST'])
 def api_watchlist_delete(code):
