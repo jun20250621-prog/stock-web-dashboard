@@ -464,7 +464,7 @@ def api_strategy_get(code):
         strategies = [dict(row) for row in cursor.fetchall()]
         
         # 取得股票基本資料
-        cursor.execute('SELECT name FROM stock WHERE code = ?', (code,))
+        cursor.execute('SELECT name FROM stocks_master WHERE code = ?', (code,))
         row = cursor.fetchone()
         stock_name = row['name'] if row else code
         
