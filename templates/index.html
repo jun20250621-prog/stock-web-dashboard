@@ -170,6 +170,27 @@
             <div class="modal-body" id="modalBody"></div>
             <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button type="button" class="btn btn-primary" id="modalSave">儲存</button></div>
         </div></div></div>
+    
+    <!-- 股票詳情 Drawer (從右側滑出) -->
+    <div class="offcanvas offcanvas-end" id="stockDrawer" tabindex="-1" style="width: 500px;">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="drawerTitle">股票詳情</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body" id="drawerBody">
+            <!-- 內容由 JS 動態載入 -->
+        </div>
+    </div>
+    
+    <!-- 新增策略 Modal -->
+    <div class="modal fade" id="strategyModal" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title" id="strategyModalTitle">新增策略</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body" id="strategyModalBody"></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button type="button" class="btn btn-primary" id="strategyModalSave">儲存</button></div>
+        </div></div></div>
+    </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     let disciplineChart, strategyChart, mainChart;
@@ -222,7 +243,7 @@
                 }
                 const pc = (s.profit_loss||0)>=0?'profit-positive':'profit-negative';
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
-                html += `<tr><td style="cursor:pointer;color:#0d6efd;" onclick="viewStockChart('${s.code}')"><b>${s.code}</b> ${s.name||''}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                html += `<tr><td style="cursor:pointer;color:#0d6efd;" onclick="openStockDrawer('${s.code}')"><b>${s.code}</b> ${s.name||''}</td><td>${s.cost||'-'}</td><td>${s.current_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td class="${pc}">${(s.profit_loss||0)>=0?'+':''}${(s.profit_loss||0).toLocaleString()}</td><td class="${pc}">${(s.profit_loss_pct||0)>=0?'+':''}${(s.profit_loss_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.application||'-'}</td><td>${s.buy_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick='editPortfolio("${s.code}")'><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deletePortfolio('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
             document.querySelector('#portfolioTable tbody').innerHTML = html || '<tr><td colspan="10" class="text-center">無持股資料</td></tr>';
             const totalPL = totalValue-totalCost, totalPLPct = totalCost>0?totalPL/totalCost*100:0;
@@ -242,6 +263,195 @@
             document.getElementById('stockSelect').value = code;
             loadStockChart();
         }, 300);
+    }
+    
+    // 股票詳情 Drawer
+    let currentDrawerCode = null;
+    async function openStockDrawer(code) {
+        currentDrawerCode = code;
+        const drawer = new bootstrap.Offcanvas(document.getElementById('stockDrawer'));
+        document.getElementById('drawerTitle').innerHTML = `<i class="fas fa-chart-line me-2"></i>${code} 詳情`;
+        document.getElementById('drawerBody').innerHTML = '<div class="text-center py-5"><div class="spinner-border"></div></div>';
+        drawer.show();
+        
+        // 取得持股/觀察名單中的資料
+        let stockInfo = null;
+        const p = portfolioData.find(s => s.code === code);
+        const w = watchlistData.find(s => s.code === code);
+        stockInfo = p || w;
+        
+        // 取得策略資料
+        let strategies = [];
+        try {
+            const resp = await fetch('/api/strategy/' + code);
+            const data = await resp.json();
+            if (data.success) strategies = data.strategies || [];
+        } catch(e) { console.error(e); }
+        
+        const stockName = stockInfo ? stockInfo.name : code;
+        let html = `
+            <div class="mb-3">
+                <h6 class="text-muted mb-2">基本資訊</h6>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>現價: <strong>${stockInfo?.current_price || '-'}</strong></span>
+                    <span class="${(stockInfo?.change_pct || 0) >= 0 ? 'price-up' : 'price-down'}">
+                        ${(stockInfo?.change_pct || 0) >= 0 ? '+' : ''}${(stockInfo?.change_pct || 0).toFixed(2)}%
+                    </span>
+                </div>
+                ${stockInfo?.industry ? `<div class="mb-2">產業: ${stockInfo.industry}</div>` : ''}
+                ${stockInfo?.application ? `<div class="mb-2">應用: ${stockInfo.application}</div>` : ''}
+            </div>
+        `;
+        
+        // 進場策略
+        const entryStrategies = strategies.filter(s => s.strategy_type === '進場');
+        html += `<hr><h6 class="text-primary mb-3"><i class="fas fa-arrow-down me-1"></i>進場策略 <button class="btn btn-sm btn-outline-primary float-end" onclick="showAddStrategy('${code}', '進場')"><i class="fas fa-plus"></i>新增</button></h6>`;
+        if (entryStrategies.length === 0) {
+            html += `<p class="text-muted small">尚無進場策略</p>`;
+        } else {
+            entryStrategies.forEach(s => {
+                html += `
+                <div class="card mb-2 border-primary">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between">
+                            <span class="badge bg-primary">第 ${s.batch_num} 批</span>
+                            <span class="badge ${s.status === '持有中' ? 'bg-success' : s.status === '已完成' ? 'bg-secondary' : 'bg-warning'}">${s.status}</span>
+                        </div>
+                        <div class="mt-2">
+                            <strong>${s.price || '-'}</strong> 元 × ${s.shares || '-'} 股
+                        </div>
+                        <div class="text-muted small">${s.description || ''}</div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editStrategy(${s.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteStrategy(${s.id}, '${code}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+        
+        // 賣出策略
+        const exitStrategies = strategies.filter(s => s.strategy_type === '賣出');
+        html += `<hr><h6 class="text-danger mb-3"><i class="fas fa-arrow-up me-1"></i>賣出策略 <button class="btn btn-sm btn-outline-danger float-end" onclick="showAddStrategy('${code}', '賣出')"><i class="fas fa-plus"></i>新增</button></h6>`;
+        if (exitStrategies.length === 0) {
+            html += `<p class="text-muted small">尚無賣出策略</p>`;
+        } else {
+            exitStrategies.forEach(s => {
+                html += `
+                <div class="card mb-2 border-danger">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between">
+                            <span class="badge bg-danger">第 ${s.batch_num} 批</span>
+                            <span class="badge ${s.status === '持有中' ? 'bg-success' : s.status === '已賣出' ? 'bg-secondary' : 'bg-warning'}">${s.status}</span>
+                        </div>
+                        <div class="mt-2">
+                            <strong>${s.price || '-'}</strong> 元 × ${s.shares || '-'} 股
+                        </div>
+                        <div class="text-muted small">${s.description || ''}</div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editStrategy(${s.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteStrategy(${s.id}, '${code}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+        
+        document.getElementById('drawerBody').innerHTML = html;
+    }
+    
+    async function showAddStrategy(code, type) {
+        const isEntry = type === '進場';
+        document.getElementById('strategyModalTitle').textContent = `新增${type}策略 - ${code}`;
+        
+        // 取得現有策略數量
+        let batchNum = 1;
+        try {
+            const resp = await fetch('/api/strategy/' + code);
+            const data = await resp.json();
+            if (data.success) {
+                const existing = data.strategies.filter(s => s.strategy_type === type);
+                batchNum = existing.length + 1;
+            }
+        } catch(e) {}
+        
+        if (batchNum > 5) {
+            alert(`${type}策略最多 5 批`);
+            return;
+        }
+        
+        document.getElementById('strategyModalBody').innerHTML = `
+            <div class="mb-2">
+                <label>批次</label>
+                <select class="form-control" id="sBatchNum">
+                    ${[1,2,3,4,5].map(n => `<option value="${n}" ${n === batchNum ? 'selected' : ''}>第 ${n} 批</option>`).join('')}
+                </select>
+            </div>
+            <div class="mb-2">
+                <label>目標價位</label>
+                <input class="form-control" id="sPrice" type="number" step="0.01" placeholder="例如: 108.5">
+            </div>
+            <div class="mb-2">
+                <label>股數</label>
+                <input class="form-control" id="sShares" type="number" value="1000" placeholder="例如: 1000">
+            </div>
+            <div class="mb-2">
+                <label>說明</label>
+                <textarea class="form-control" id="sDesc" rows="2" placeholder="選填"></textarea>
+            </div>
+            <div class="mb-2">
+                <label>狀態</label>
+                <select class="form-control" id="sStatus">
+                    <option value="${isEntry ? '未買' : '持有中'}">${isEntry ? '未買' : '持有中'}</option>
+                    <option value="持有中">${isEntry ? '持有中' : '持有中'}</option>
+                    <option value="已完成">已完成</option>
+                    <option value="觸發">觸發</option>
+                    <option value="已賣出">已賣出</option>
+                </select>
+            </div>
+        `;
+        
+        document.getElementById('strategyModalSave').onclick = async () => {
+            const data = {
+                stock_code: code,
+                strategy_type: type,
+                batch_num: parseInt(document.getElementById('sBatchNum').value),
+                price: parseFloat(document.getElementById('sPrice').value) || null,
+                shares: parseInt(document.getElementById('sShares').value) || null,
+                description: document.getElementById('sDesc').value,
+                status: document.getElementById('sStatus').value
+            };
+            const resp = await fetch('/api/strategy', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await resp.json();
+            if (result.success) {
+                bootstrap.Modal.getInstance(document.getElementById('strategyModal')).hide();
+                openStockDrawer(code); // 重新整理
+            } else {
+                alert(result.error || '新增失敗');
+            }
+        };
+        
+        new bootstrap.Modal(document.getElementById('strategyModal')).show();
+    }
+    
+    async function editStrategy(strategyId) {
+        // 先取得策略詳情
+        // 簡化版：直接開啟編輯（略）
+    }
+    
+    async function deleteStrategy(strategyId, code) {
+        if (!confirm('確定刪除此策略？')) return;
+        const resp = await fetch('/api/strategy/' + strategyId, {method: 'DELETE'});
+        const result = await resp.json();
+        if (result.success) {
+            openStockDrawer(code);
+        } else {
+            alert('刪除失敗');
+        }
     }
 
     function editPortfolio(code){
@@ -268,7 +478,7 @@
             watchlistData = await resp.json();
             let html = ''; watchlistData.forEach(s => {
                 const cc = (s.change_pct||0)>=0?'price-up':'price-down';
-                html += `<tr><td style="cursor:pointer;color:#0d6efd;" onclick="viewStockChart('${s.code}')"><b>${s.code}</b> ${s.name||''}</td><td>${s.current_price||'-'}</td><td>${s.target_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.reason||''}</td><td>${s.add_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editWatchlist('${s.code}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteWatchlist('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                html += `<tr><td style="cursor:pointer;color:#0d6efd;" onclick="openStockDrawer('${s.code}')"><b>${s.code}</b> ${s.name||''}</td><td>${s.current_price||'-'}</td><td>${s.target_price||'-'}</td><td class="${cc}">${(s.change_pct||0)>=0?'+':''}${(s.change_pct||0).toFixed(2)}%</td><td>${s.industry||'-'}</td><td>${s.reason||''}</td><td>${s.add_date||'-'}</td><td><button class="btn btn-sm btn-outline-primary me-1" onclick="editWatchlist('${s.code}')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteWatchlist('${s.code}')"><i class="fas fa-trash"></i></button></td></tr>`;
             });
             document.querySelector('#watchlistTable tbody').innerHTML = html || '<tr><td colspan="8" class="text-center">無觀察名單</td></tr>';
         }catch(e){ console.error(e); }

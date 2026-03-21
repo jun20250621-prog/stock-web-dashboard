@@ -444,6 +444,115 @@ def api_watchlist_update(code):
         import traceback
         return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
+# ==================== 投資策略 API ====================
+
+@app.route('/api/strategy/<code>', methods=['GET'])
+def api_strategy_get(code):
+    """取得股票的所有策略"""
+    try:
+        conn = sqlite3.connect(config.get('database', {}).get('path', 'data/stock_data.db'))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT * FROM stock_strategy 
+            WHERE stock_code = ? 
+            ORDER BY strategy_type, batch_num
+        ''', (code,))
+        
+        strategies = [dict(row) for row in cursor.fetchall()]
+        
+        # 取得股票基本資料
+        cursor.execute('SELECT name FROM stock WHERE code = ?', (code,))
+        row = cursor.fetchone()
+        stock_name = row['name'] if row else code
+        
+        conn.close()
+        return jsonify({
+            'success': True,
+            'stock_code': code,
+            'stock_name': stock_name,
+            'strategies': strategies
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/strategy', methods=['POST'])
+def api_strategy_add():
+    """新增策略"""
+    try:
+        data = request.json
+        stock_code = data.get('stock_code')
+        strategy_type = data.get('strategy_type')  # '進場' or '賣出'
+        batch_num = data.get('batch_num')
+        price = data.get('price')
+        shares = data.get('shares')
+        description = data.get('description', '')
+        status = data.get('status', '未買')
+        
+        conn = sqlite3.connect(config.get('database', {}).get('path', 'data/stock_data.db'))
+        cursor = conn.cursor()
+        
+        # 檢查該類型策略是否已滿 5 批
+        cursor.execute('''
+            SELECT COUNT(*) FROM stock_strategy 
+            WHERE stock_code = ? AND strategy_type = ?
+        ''', (stock_code, strategy_type))
+        count = cursor.fetchone()[0]
+        if count >= 5:
+            conn.close()
+            return jsonify({'success': False, 'error': f'{strategy_type}策略最多 5 批'}), 400
+        
+        cursor.execute('''
+            INSERT INTO stock_strategy (stock_code, strategy_type, batch_num, price, shares, description, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (stock_code, strategy_type, batch_num, price, shares, description, status))
+        
+        strategy_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'id': strategy_id})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/strategy/<int:strategy_id>', methods=['PUT'])
+def api_strategy_update(strategy_id):
+    """更新策略"""
+    try:
+        data = request.json
+        conn = sqlite3.connect(config.get('database', {}).get('path', 'data/stock_data.db'))
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE stock_strategy 
+            SET batch_num = ?, price = ?, shares = ?, description = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (data.get('batch_num'), data.get('price'), data.get('shares'), data.get('description'), data.get('status'), strategy_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/strategy/<int:strategy_id>', methods=['DELETE'])
+def api_strategy_delete(strategy_id):
+    """刪除策略"""
+    try:
+        conn = sqlite3.connect(config.get('database', {}).get('path', 'data/stock_data.db'))
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM stock_strategy WHERE id = ?', (strategy_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/trade/add', methods=['POST'])
 def api_trade_add():
     data = request.json
