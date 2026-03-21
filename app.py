@@ -81,10 +81,8 @@ def get_yahoo_price(stock_code: str, days: int = 10) -> Optional[Dict]:
     from datetime import datetime
     
     try:
-        # 上市: 2331.TW, 櫃買: 5392.TWO
-        if stock_code.startswith('00') or stock_code.endswith('B'):
-            return None  # ETF 不支援
-        
+        # 上市: 2331.TW, 櫃買: 5392.TWO, ETF: 00687B.TW
+        # 修正：只有 00687B 這種代碼結尾是 B 的才是 ETF
         symbol = f"{stock_code}.TW"
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range={days}d"
         
@@ -113,8 +111,12 @@ def get_yahoo_price(stock_code: str, days: int = 10) -> Optional[Dict]:
             current_price = meta.get('regularMarketPrice', 0)
             
             # 從 K 線資料計算漲跌幅
-            closes = quote.get('close', [])
-            prev_close = closes[-2] if len(closes) >= 2 else current_price
+            # 修正：找到最近一個有效的收盤價（避免週末重複值的問題）
+            closes = [c for c in quote.get('close', []) if c is not None]
+            if len(closes) >= 2:
+                prev_close = closes[-2]  # 倒數第二個有效收盤價
+            else:
+                prev_close = current_price
             
             change = current_price - prev_close
             change_pct = (change / prev_close * 100) if prev_close else 0
