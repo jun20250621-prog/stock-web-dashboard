@@ -111,10 +111,16 @@ def get_yahoo_price(stock_code: str, days: int = 10) -> Optional[Dict]:
             current_price = meta.get('regularMarketPrice', 0)
             
             # 從 K 線資料計算漲跌幅
-            # 修正：找到最近一個有效的收盤價（避免週末重複值的問題）
+            # 修正：找到最近一個「不同」的收盤價（解決週末重複值的問題）
             closes = [c for c in quote.get('close', []) if c is not None]
             if len(closes) >= 2:
-                prev_close = closes[-2]  # 倒數第二個有效收盤價
+                # 從後往前找第一個明顯不同的收盤價（避開浮點精度問題）
+                prev_close = current_price
+                epsilon = 0.001  # 忽略小於 0.1% 的差異
+                for c in reversed(closes[:-1]):
+                    if abs(c - current_price) / current_price > epsilon:
+                        prev_close = c
+                        break
             else:
                 prev_close = current_price
             
