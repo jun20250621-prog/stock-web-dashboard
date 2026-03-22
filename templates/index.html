@@ -201,6 +201,9 @@
 
     function loadAll(){ loadSchedule(); loadPortfolio(); loadWatchlist(); loadTrades(); loadAnalysis(); loadStockSelect(); }
     
+    // A1: 每分鐘自動更新股價
+    setInterval(() => { loadPortfolio(); loadWatchlist(); }, 60000);
+    
     async function loadSchedule(){
         try{
             const resp = await fetch('/api/schedule');
