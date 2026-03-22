@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         :root { --primary: #1a73e8; --success: #34a853; --danger: #ea4335; --bg: #f8f9fa; }
         body { background: var(--bg); font-family: 'Microsoft JhengHei', Arial, sans-serif; }
@@ -113,6 +114,7 @@
                         <i class="fas fa-chart-line me-2"></i>個股技術分析
                         <select class="form-select form-select-sm ms-3" id="stockSelect" style="width:auto;display:inline-block;"><option value="">選擇股票...</option><option value="ALL">全部顯示 (ALL)</option></select>
                         <select class="form-select form-select-sm ms-2" id="chartType" style="width:auto;display:inline-block;" onchange="loadStockChart()">
+                            <option value="candle">K線圖+策略</option>
                             <option value="price">股價走勢圖</option>
                             <option value="kdj">KDJ 指標</option>
                             <option value="macd">MACD 指標</option>
@@ -337,6 +339,12 @@
             html += `<p class="text-muted small">尚無賣出策略</p>`;
         } else {
             exitStrategies.forEach(s => {
+                // 顯示到期日
+                let expireInfo = '';
+                if (s.expire_date && s.days_left !== undefined) {
+                    const daysColor = s.days_left <= 3 ? 'text-danger' : s.days_left <= 7 ? 'text-warning' : 'text-muted';
+                    expireInfo = `<div class="${daysColor} small"><i class="far fa-clock"></i> 到期: ${s.expire_date} (${s.days_left}天)</div>`;
+                }
                 html += `
                 <div class="card mb-2 border-danger">
                     <div class="card-body py-2">
@@ -347,6 +355,7 @@
                         <div class="mt-2">
                             <strong>${s.price || '-'}</strong> 元 × ${s.shares || '-'} 股
                         </div>
+                        ${expireInfo}
                         <div class="text-muted small">${s.description || ''}</div>
                         <div class="mt-2">
                             <button class="btn btn-sm btn-outline-primary me-1" onclick="editStrategy(${s.id})"><i class="fas fa-edit"></i></button>
@@ -409,6 +418,13 @@
                     <option value="已賣出">已賣出</option>
                 </select>
             </div>
+            ${!isEntry ? `
+            <div class="mb-2">
+                <label>有效期 (天數)</label>
+                <input class="form-control" id="sExpireDays" type="number" value="30" min="1" placeholder="例如: 30">
+                <small class="text-muted">策略到期前 3 天會發 Telegram 通知</small>
+            </div>
+            ` : ''}
         `;
         
         document.getElementById('strategyModalSave').onclick = async () => {
@@ -419,7 +435,8 @@
                 price: parseFloat(document.getElementById('sPrice').value) || null,
                 shares: parseInt(document.getElementById('sShares').value) || null,
                 description: document.getElementById('sDesc').value,
-                status: document.getElementById('sStatus').value
+                status: document.getElementById('sStatus').value,
+                expire_days: document.getElementById('sExpireDays') ? parseInt(document.getElementById('sExpireDays').value) : 30
             };
             const resp = await fetch('/api/strategy', {
                 method: 'POST',
@@ -597,6 +614,13 @@
                 return; 
             }
             const chartType = document.getElementById('chartType').value;
+            
+            // 3A: K線圖 + 買賣點標記 (使用 Plotly)
+            if(chartType === 'candle'){
+                await loadCandleChart(code, data);
+                return;
+            }
+            
             const ctx = document.getElementById('mainChart').getContext('2d');
             if(mainChart) mainChart.destroy();
             let chartData={}, chartOptions={responsive:true, maintainAspectRatio:false};
@@ -614,6 +638,179 @@
             }
             mainChart = new Chart(ctx, {type:'line', data:chartData, options:chartOptions});
         }catch(e){ console.error(e); alert('載入失敗'); }
+    }
+    
+    // 3A: K線圖 + MA + KD,RSI + 買賣點標記
+    async function loadCandleChart(code, stockData){
+        try{
+            // 3A-1A: 取得策略買賣點
+            const resp = await fetch('/api/strategy/' + code);
+            const strategyData = await resp.json();
+            const strategies = strategyData.success ? strategyData.strategies || [] : [];
+            
+            // 分類買賣點
+            const buyPoints = strategies.filter(s => s.strategy_type === '進場' && s.status !== '未買').map(s => ({
+                x: s.buy_date || s.created_at,
+                y: s.price,
+                type: 'buy',
+                batch: s.batch_num,
+                desc: s.description || '買入'
+            }));
+            
+            const sellPoints = strategies.filter(s => s.strategy_type === '賣出').map(s => ({
+                x: s.created_at,
+                y: s.price,
+                type: 'sell',
+                batch: s.batch_num,
+                desc: s.description || '賣出'
+            }));
+            
+            const stopLossPoints = strategies.filter(s => s.status === '已完成').map(s => ({
+                x: s.updated_at,
+                y: s.price,
+                type: 'stop_loss',
+                desc: '停損'
+            }));
+            
+            const stopProfitPoints = strategies.filter(s => s.status === '觸發').map(s => ({
+                x: s.updated_at,
+                y: s.price,
+                type: 'stop_profit',
+                desc: '停利'
+            }));
+            
+            // K線數據
+            const dates = stockData.labels || [];
+            const opens = stockData.opens || [];
+            const highs = stockData.highs || [];
+            const lows = stockData.lows || [];
+            const closes = stockData.prices || [];
+            
+            // 3A-3B: MA5, MA20, MA60
+            const ma5 = stockData.ma5 || [];
+            const ma20 = stockData.ma20 || [];
+            const ma60 = stockData.ma60 || [];
+            
+            // K線
+            const trace1 = {
+                x: dates,
+                close: closes,
+                decreasing: {line: {color: '#34a853'}},
+                high: highs,
+                increasing: {line: {color: '#ea4335'}},
+                line: {color: 'rgba(31,119,180,1)'},
+                low: lows,
+                open: opens,
+                type: 'candlestick',
+                xaxis: 'x',
+                yaxis: 'y',
+                name: 'K線'
+            };
+            
+            // 3A-2A: 買點 ◉
+            const traceBuy = {
+                x: buyPoints.map(p => p.x),
+                y: buyPoints.map(p => p.y),
+                mode: 'markers',
+                type: 'scatter',
+                marker: {size: 14, color: '#34a853', symbol: 'circle', line: {color: 'white', width: 2}},
+                name: '買點',
+                text: buyPoints.map(p => `買點 #${p.batch}: ${p.desc}`),
+                hovertemplate: '%{text}<br>價格: %{y}<extra></extra>'
+            };
+            
+            // 3A-2A: 賣點 ◯
+            const traceSell = {
+                x: sellPoints.map(p => p.x),
+                y: sellPoints.map(p => p.y),
+                mode: 'markers',
+                type: 'scatter',
+                marker: {size: 14, color: '#ea4335', symbol: 'circle-open', line: {color: '#ea4335', width: 2}},
+                name: '賣點',
+                text: sellPoints.map(p => `賣點 #${p.batch}: ${p.desc}`),
+                hovertemplate: '%{text}<br>價格: %{y}<extra></extra>'
+            };
+            
+            // 3A-2B: 停損 🔻
+            const traceSL = {
+                x: stopLossPoints.map(p => p.x),
+                y: stopLossPoints.map(p => p.y),
+                mode: 'markers',
+                type: 'scatter',
+                marker: {size: 12, color: '#ea4335', symbol: 'triangle-down'},
+                name: '停損',
+                text: stopLossPoints.map(p => p.desc),
+                hovertemplate: '%{text}<br>價格: %{y}<extra></extra>'
+            };
+            
+            // 3A-2B: 停利 🔺
+            const traceSP = {
+                x: stopProfitPoints.map(p => p.x),
+                y: stopProfitPoints.map(p => p.y),
+                mode: 'markers',
+                type: 'scatter',
+                marker: {size: 12, color: '#fbbc04', symbol: 'triangle-up'},
+                name: '停利',
+                text: stopProfitPoints.map(p => p.desc),
+                hovertemplate: '%{text}<br>價格: %{y}<extra></extra>'
+            };
+            
+            // MA 線
+            const traceMA5 = {x: dates, y: ma5, type: 'scatter', mode: 'lines', name: 'MA5', line: {color: '#34a853', width: 1}};
+            const traceMA20 = {x: dates, y: ma20, type: 'scatter', mode: 'lines', name: 'MA20', line: {color: '#fbbc04', width: 1}};
+            const traceMA60 = {x: dates, y: ma60, type: 'scatter', mode: 'lines', name: 'MA60', line: {color: '#ea4335', width: 1}};
+            
+            // RSI (3A-3C)
+            const traceRSI = {
+                x: dates,
+                y: stockData.rsi || [],
+                type: 'scatter',
+                mode: 'lines',
+                name: 'RSI',
+                line: {color: '#9c27b0'},
+                xaxis: 'x',
+                yaxis: 'y2'
+            };
+            
+            // KDJ (3A-3C)
+            const traceK = {
+                x: dates,
+                y: stockData.k || [],
+                type: 'scatter',
+                mode: 'lines',
+                name: 'K',
+                line: {color: '#1a73e8'},
+                xaxis: 'x',
+                yaxis: 'y3'
+            };
+            const traceD = {
+                x: dates,
+                y: stockData.d || [],
+                type: 'scatter',
+                mode: 'lines',
+                name: 'D',
+                line: {color: '#ea4335'},
+                xaxis: 'x',
+                yaxis: 'y3'
+            };
+            
+            const layout = {
+                title: `${code} K線圖 + 買賣點`,
+                dragmode: 'zoom',
+                margin: {r: 50, t: 50, b: 80, l: 60},
+                showlegend: true,
+                legend: {orientation: 'h', y: 1.1},
+                xaxis: {
+                    rangeslider: {visible: false},
+                    type: 'date'
+                },
+                yaxis: {domain: [0.45, 1], title: '價格'},
+                yaxis2: {domain: [0.25, 0.4], title: 'RSI', range: [0, 100]},
+                yaxis3: {domain: [0, 0.2], title: 'KD'}
+            };
+            
+            Plotly.newPlot('mainChart', [trace1, traceMA5, traceMA20, traceMA60, traceBuy, traceSell, traceSL, traceSP, traceRSI, traceK, traceD], layout, {responsive: true});
+        }catch(e){ console.error('K線圖錯誤:', e); }
     }
     
     async function loadAllCharts(){

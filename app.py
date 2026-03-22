@@ -276,18 +276,28 @@ def api_stock(code):
         ema26 = close.ewm(span=26).mean()
         df['macd'] = (ema12 - ema26).fillna(0)
         df['signal'] = df['macd'].ewm(span=9).mean().fillna(0)
+        # KDJ 計算
+        low_min = df['low'].rolling(9).min()
+        high_max = df['high'].rolling(9).max()
+        rsv = (close - low_min) / (high_max - low_min) * 100
+        rsv = rsv.fillna(50)
+        df['k'] = rsv.ewm(com=2).mean().fillna(50)
+        df['d'] = df['k'].ewm(com=2).mean().fillna(50)
         return jsonify({
             'code': code,
             'labels': [str(p.get('date', '')) for p in price_data],
             'prices': [float(p.get('close', 0) or 0) for p in price_data],
+            'opens': [float(p.get('open', 0) or 0) for p in price_data],
+            'highs': [float(p.get('high', 0) or 0) for p in price_data],
+            'lows': [float(p.get('low', 0) or 0) for p in price_data],
             'ma5': [float(x) if not pd.isna(x) else None for x in df['ma5'].tolist()],
             'ma20': [float(x) if not pd.isna(x) else None for x in df['ma20'].tolist()],
             'ma60': [float(x) if not pd.isna(x) else None for x in df['ma60'].tolist()],
             'rsi': [float(x) if not pd.isna(x) else 50 for x in df['rsi'].tolist()],
             'macd': [float(x) if not pd.isna(x) else 0 for x in df['macd'].tolist()],
             'signal': [float(x) if not pd.isna(x) else 0 for x in df['signal'].tolist()],
-            'k': [float(x) if not pd.isna(x) else 50 for x in df['macd'].tolist()],
-            'd': [float(x) if not pd.isna(x) else 50 for x in df['signal'].tolist()]
+            'k': [float(x) if not pd.isna(x) else 50 for x in df['k'].tolist()],
+            'd': [float(x) if not pd.isna(x) else 50 for x in df['d'].tolist()]
         })
     return jsonify({'error': '無法取得資料'})
 
@@ -455,13 +465,29 @@ def api_strategy_get(code):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
+        # 2A-1B: 按日期排序（先買先賣）
         cursor.execute('''
             SELECT * FROM stock_strategy 
             WHERE stock_code = ? 
-            ORDER BY strategy_type, batch_num
+            ORDER BY strategy_type, created_at, batch_num
         ''', (code,))
         
         strategies = [dict(row) for row in cursor.fetchall()]
+        
+        # 計算到期日
+        from datetime import datetime, timedelta
+        for s in strategies:
+            if s.get('created_at') and s.get('expire_days'):
+                try:
+                    created = datetime.strptime(s['created_at'], '%Y-%m-%d %H:%M:%S')
+                    expire_date = created + timedelta(days=s['expire_days'])
+                    s['expire_date'] = expire_date.strftime('%Y-%m-%d')
+                    # 計算剩餘天數
+                    now = datetime.now()
+                    s['days_left'] = (expire_date - now).days
+                except:
+                    s['expire_date'] = None
+                    s['days_left'] = None
         
         # 取得股票基本資料
         cursor.execute('SELECT name FROM stocks_master WHERE code = ?', (code,))
@@ -491,6 +517,7 @@ def api_strategy_add():
         shares = data.get('shares')
         description = data.get('description', '')
         status = data.get('status', '未買')
+        expire_days = data.get('expire_days', 30)  # 預設30天
         
         conn = sqlite3.connect(config.get('database', {}).get('path', 'data/stock_data.db'))
         cursor = conn.cursor()
@@ -506,9 +533,9 @@ def api_strategy_add():
             return jsonify({'success': False, 'error': f'{strategy_type}策略最多 5 批'}), 400
         
         cursor.execute('''
-            INSERT INTO stock_strategy (stock_code, strategy_type, batch_num, price, shares, description, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (stock_code, strategy_type, batch_num, price, shares, description, status))
+            INSERT INTO stock_strategy (stock_code, strategy_type, batch_num, price, shares, description, status, expire_days)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (stock_code, strategy_type, batch_num, price, shares, description, status, expire_days))
         
         strategy_id = cursor.lastrowid
         conn.commit()
@@ -969,8 +996,97 @@ def check_schedule():
         if current_time == evening_time:
             msg = f"🌙 <b>盤後報告</b> - {current_date}\n\n" + generate_report_message()
             send_telegram(msg)
+        
+        # P3A: 檢查策略到期 (1B-2A: 3天前通知)
+        check_strategy_expiry_notify()
     except Exception as e:
         print(f"Schedule check error: {e}")
+
+# ==================== 策略到期檢查 API ====================
+
+@app.route('/api/strategy/check-expire', methods=['GET'])
+def api_check_expire():
+    """手動檢查到期策略"""
+    try:
+        result = check_strategy_expiry_notify()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def check_strategy_expiry_notify():
+    """檢查策略到期並發送通知"""
+    try:
+        from datetime import datetime, timedelta
+        
+        conn = sqlite3.connect(config.get('database', {}).get('path', 'data/stock_data.db'))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # 取得所有策略
+        cursor.execute('''
+            SELECT * FROM stock_strategy 
+            WHERE strategy_type = '賣出' AND status = '持有中'
+        ''')
+        
+        strategies = [dict(row) for row in cursor.fetchall()]
+        
+        now = datetime.now()
+        notify_list = []  # 即將到期
+        expired_list = []  # 已過期
+        
+        for s in strategies:
+            if s.get('created_at') and s.get('expire_days'):
+                try:
+                    created = datetime.strptime(s['created_at'], '%Y-%m-%d %H:%M:%S')
+                    expire_date = created + timedelta(days=s['expire_days'])
+                    days_left = (expire_date - now).days
+                    
+                    # 1B-2A: 3天前通知
+                    if 0 <= days_left <= 3:
+                        notify_list.append({
+                            'code': s['stock_code'],
+                            'batch': s['batch_num'],
+                            'price': s['price'],
+                            'days_left': days_left,
+                            'expire_date': expire_date.strftime('%Y-%m-%d')
+                        })
+                    
+                    # 1B-3B: 自動刪除已過期 N 天（這裡設為超過 7 天）
+                    if days_left < -7:
+                        expired_list.append(s['id'])
+                        
+                except:
+                    pass
+        
+        conn.close()
+        
+        # 發送 Telegram 通知
+        if notify_list:
+            msg = "⚠️ <b>策略即將到期</b>\n\n"
+            for n in notify_list:
+                emoji = "🔴" if n['days_left'] == 0 else "🟡"
+                msg += f"{emoji} {n['code']} 第{n['batch']}批 - 價格 {n['price']}，剩餘 {n['days_left']} 天\n"
+            send_telegram(msg)
+        
+        # 1B-3B: 自動刪除過期策略
+        if expired_list:
+            conn = sqlite3.connect(config.get('database', {}).get('path', 'data/stock_data.db'))
+            cursor = conn.cursor()
+            for eid in expired_list:
+                cursor.execute('DELETE FROM stock_strategy WHERE id = ?', (eid,))
+            conn.commit()
+            conn.close()
+            print(f"✅ 已自動刪除 {len(expired_list)} 個過期策略")
+        
+        return {
+            'success': True,
+            'notify_count': len(notify_list),
+            'expired_count': len(expired_list),
+            'notify_list': notify_list
+        }
+    except Exception as e:
+        print(f"Check expiry error: {e}")
+        return {'success': False, 'error': str(e)}
 
 # 啟動排程器
 scheduler = BackgroundScheduler()
