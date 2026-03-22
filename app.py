@@ -1002,6 +1002,35 @@ def check_schedule():
     except Exception as e:
         print(f"Schedule check error: {e}")
 
+# ==================== 資料庫升級 API ====================
+
+@app.route('/api/db/upgrade', methods=['POST'])
+def api_db_upgrade():
+    """升級資料庫結構"""
+    try:
+        db_path = config.get('database', {}).get('path', 'data/stock_data.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # 檢查並新增 expire_days 欄位
+        cursor.execute("PRAGMA table_info(stock_strategy)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        if 'expire_days' not in columns:
+            cursor.execute('ALTER TABLE stock_strategy ADD COLUMN expire_days INTEGER DEFAULT 30')
+            print('✅ 新增 expire_days 欄位')
+        
+        if 'buy_date' not in columns:
+            cursor.execute('ALTER TABLE stock_strategy ADD COLUMN buy_date TEXT')
+            print('✅ 新增 buy_date 欄位')
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': '資料庫升級完成'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # ==================== 策略到期檢查 API ====================
 
 @app.route('/api/strategy/check-expire', methods=['GET'])
